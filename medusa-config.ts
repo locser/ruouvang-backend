@@ -78,12 +78,10 @@ module.exports = defineConfig({
       // Dấu chấm đầu (`.polarisvn.holdings`) là cú pháp Vite cho "mọi
       // subdomain của tên miền này" — nhờ vậy thêm shop mới không phải sửa
       // file này nữa.
-      config.server.allowedHosts = [
-        ".polarisvn.holdings",
-        "legion-pro-7.taildc8df5.ts.net",
-        "localhost",
-        "100.81.31.20",
-      ]
+      //
+      // Nay mở mọi host (cùng tinh thần CORS mở hết ở trên), giống `allowedHosts: true`
+      // của web-hrm. Chỉ tác động admin dev: bản `medusa start` không dùng Vite.
+      config.server.allowedHosts = true
       return config
     },
   },
