@@ -52,7 +52,7 @@ module.exports = defineConfig({
       config.server.fs.allow = config.server.fs.allow || []
       config.server.fs.allow.push("/app")
       console.log("[ViteConfigFSAllow]:", config.server.fs.allow)
-      config.server.port = 5173
+      config.server.port = Number(process.env.CONFIG_ADMIN_PORT || 5173)
       config.server.host = "0.0.0.0"
       // Kênh cập nhật nóng (HMR) của Vite. Trình duyệt nối tới cổng này; nếu cổng không tới được thì
       // Vite client báo "server connection lost" rồi dò `http://localhost:<cổng>/app/` liên tục, và
