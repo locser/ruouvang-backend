@@ -1,0 +1,106 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "orders": "Orders",
+    "products": "Products",
+    "customers": "Customers",
+    "inventory": "Inventory",
+    "promotions": "Promotions",
+    "price_lists": "Price Lists",
+    "sales_channels": "Sales Channels",
+    "settings": "Settings",
+    "page_builder": "Page Builder",
+    "blog": "Blog Posts",
+    "languages": "Language Manager"
+  },
+  "blog": {
+    "title": "Blog Posts & News Management",
+    "description": "Manage all blog posts, categories, tags, and authors.",
+    "tab_posts": "Posts",
+    "tab_categories": "Categories",
+    "tab_tags": "Tags",
+    "tab_authors": "Authors",
+    "btn_add_post": "+ Write New Post",
+    "btn_add_category": "+ Add Category",
+    "btn_add_tag": "+ Add Tag",
+    "btn_add_author": "+ Add Author",
+    "th_title": "Post Title",
+    "th_category": "Category",
+    "th_author": "Author",
+    "th_status": "Status",
+    "th_publish_date": "Publish Date",
+    "status_published": "Published",
+    "status_draft": "Draft"
+  },
+  "page_builder": {
+    "title": "Storefront Page Builder",
+    "description": "Enable/disable, reorder, and configure homepage components.",
+    "btn_add_section": "+ Add Component Section",
+    "btn_edit_settings": "Configure Settings",
+    "section_type": "Component Type",
+    "position": "Display Position",
+    "status_enabled": "Enabled",
+    "status_disabled": "Hidden"
+  },
+  "languages": {
+    "title": "Medusa Multi-Language Manager (i18n)",
+    "description": "Configure dashboard languages. Supports Vietnamese, English, and CSV imports.",
+    "btn_import_csv": "📥 Import Language CSV",
+    "btn_download_template": "📋 Download Sample CSV",
+    "current_lang": "Current Interface Language:",
+    "th_key": "Key",
+    "th_vi": "Vietnamese 🇻🇳",
+    "th_en": "English 🇬🇧",
+    "th_custom": "Custom Language 🌐"
+  },
+  "orders": {
+    "title": "Orders",
+    "description": "Manage and fulfill customer orders",
+    "create": "Create Order",
+    "export": "Export Orders"
+  },
+  "products": {
+    "title": "Products",
+    "description": "Manage inventory, variants, and categories",
+    "create": "Add Product",
+    "import": "Import Products"
+  },
+  "customers": {
+    "title": "Customers",
+    "description": "View customer list and order histories",
+    "create": "Add Customer"
+  },
+  "inventory": {
+    "title": "Inventory",
+    "description": "Track stock availability across locations",
+    "manage": "Manage Stock"
+  },
+  "discounts": {
+    "title": "Discounts & Promotions",
+    "description": "Manage promotion codes and store deals",
+    "create": "Create Discount"
+  },
+  "settings": {
+    "title": "Store Settings",
+    "description": "General settings, sales channels, and payment methods",
+    "general": "General Settings",
+    "regions": "Shipping Regions",
+    "sales_channels": "Sales Channels",
+    "tax_rates": "Taxes & Fees"
+  },
+  "common": {
+    "save": "Save Changes",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "status": "Status",
+    "actions": "Actions",
+    "search": "Search...",
+    "filter": "Filter",
+    "active": "Active",
+    "disabled": "Disabled",
+    "pending": "Pending",
+    "completed": "Completed",
+    "canceled": "Canceled"
+  }
+}

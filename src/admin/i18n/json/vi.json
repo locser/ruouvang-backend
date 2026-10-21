@@ -1,0 +1,106 @@
+{
+  "nav": {
+    "dashboard": "Bảng điều khiển",
+    "orders": "Đơn hàng",
+    "products": "Sản phẩm",
+    "customers": "Khách hàng",
+    "inventory": "Tồn kho",
+    "promotions": "Khuyến mãi & Ưu đãi",
+    "price_lists": "Bảng giá sản phẩm",
+    "sales_channels": "Kênh bán hàng",
+    "settings": "Cấu hình hệ thống",
+    "page_builder": "Trình dựng trang",
+    "blog": "Bài viết Blog",
+    "languages": "Quản lý Ngôn ngữ"
+  },
+  "blog": {
+    "title": "Quản lý Bài viết & Tin tức (Blog)",
+    "description": "Quản lý tất cả bài viết, danh mục tin tức, thẻ bài viết và tác giả.",
+    "tab_posts": "Bài viết",
+    "tab_categories": "Danh mục",
+    "tab_tags": "Thẻ (Tags)",
+    "tab_authors": "Tác giả",
+    "btn_add_post": "+ Viết bài mới",
+    "btn_add_category": "+ Thêm danh mục",
+    "btn_add_tag": "+ Thêm thẻ",
+    "btn_add_author": "+ Thêm tác giả",
+    "th_title": "Tiêu đề bài viết",
+    "th_category": "Danh mục",
+    "th_author": "Tác giả",
+    "th_status": "Trạng thái",
+    "th_publish_date": "Ngày xuất bản",
+    "status_published": "Đã xuất bản",
+    "status_draft": "Bản nháp"
+  },
+  "page_builder": {
+    "title": "Trình Dựng Trang Cửa Hàng (Page Builder)",
+    "description": "Bật/tắt, sắp xếp thứ tự và tùy chỉnh giao diện các khối component trên trang chủ.",
+    "btn_add_section": "+ Thêm khối Component mới",
+    "btn_edit_settings": "Tùy chỉnh cấu hình",
+    "section_type": "Loại khối Component",
+    "position": "Vị trí sắp xếp",
+    "status_enabled": "Đang hiển thị",
+    "status_disabled": "Đã ẩn"
+  },
+  "languages": {
+    "title": "Quản Lý Đa Ngôn Ngữ Medusa (i18n)",
+    "description": "Cấu hình ngôn ngữ hiển thị toàn hệ thống Medusa Admin. Hỗ trợ Tiếng Việt, Tiếng Anh và nhập CSV.",
+    "btn_import_csv": "📥 Nhập CSV Ngôn Ngữ Mới",
+    "btn_download_template": "📋 Tải CSV Mẫu",
+    "current_lang": "Ngôn ngữ giao diện hiện tại:",
+    "th_key": "Khóa (Key)",
+    "th_vi": "Tiếng Việt 🇻🇳",
+    "th_en": "Tiếng Anh 🇬🇧",
+    "th_custom": "Ngôn ngữ tùy chỉnh 🌐"
+  },
+  "orders": {
+    "title": "Đơn hàng",
+    "description": "Quản lý và xử lý toàn bộ đơn hàng của khách hàng",
+    "create": "Tạo đơn hàng mới",
+    "export": "Xuất file đơn hàng"
+  },
+  "products": {
+    "title": "Sản phẩm",
+    "description": "Quản lý kho hàng, biến thể sản phẩm và danh mục đặc sản",
+    "create": "Thêm sản phẩm mới",
+    "import": "Nhập sản phẩm"
+  },
+  "customers": {
+    "title": "Khách hàng",
+    "description": "Danh sách khách hàng và lịch sử mua sắm",
+    "create": "Thêm khách hàng"
+  },
+  "inventory": {
+    "title": "Tồn kho",
+    "description": "Theo dõi số lượng hàng tồn kho theo từng địa điểm",
+    "manage": "Quản lý kho hàng"
+  },
+  "discounts": {
+    "title": "Mã giảm giá & Khuyến mãi",
+    "description": "Quản lý các chương trình ưu đãi và khuyến mãi",
+    "create": "Tạo mã giảm giá"
+  },
+  "settings": {
+    "title": "Cấu hình hệ thống",
+    "description": "Cài đặt chung, kênh bán hàng và phương thức thanh toán",
+    "general": "Cài đặt chung",
+    "regions": "Khu vực giao hàng",
+    "sales_channels": "Kênh bán hàng",
+    "tax_rates": "Thuế & Phí"
+  },
+  "common": {
+    "save": "Lưu thay đổi",
+    "cancel": "Hủy bỏ",
+    "delete": "Xóa",
+    "edit": "Chỉnh sửa",
+    "status": "Trạng thái",
+    "actions": "Hành động",
+    "search": "Tìm kiếm...",
+    "filter": "Bộ lọc",
+    "active": "Đang hoạt động",
+    "disabled": "Tắt",
+    "pending": "Đang xử lý",
+    "completed": "Hoàn thành",
+    "canceled": "Đã hủy"
+  }
+}

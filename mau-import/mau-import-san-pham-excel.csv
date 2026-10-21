@@ -1,0 +1,4 @@
+﻿Product Handle,Product Title,Product Subtitle,Product Description,Product Status,Product Discountable,Product Category 1,Product Sales Channel 1,Shipping Profile Id,Variant Title,Variant SKU,Variant Manage Inventory,Variant Allow Backorder,Variant Price VND,Variant Option 1 Name,Variant Option 1 Value
+vang-do-mau-chateau-demo,Vang đỏ mẫu Château Demo,Mẫu import,Rượu vang đỏ dùng để thử import,published,true,<ID_DANH_MUC_VANG_DO>,<ID_KENH_BAN_HANG>,<ID_SHIPPING_PROFILE>,750ml,CW-MAU-DO-750,true,false,850000,Dung tích,750ml
+vang-do-mau-chateau-demo,Vang đỏ mẫu Château Demo,Mẫu import,Rượu vang đỏ dùng để thử import,published,true,<ID_DANH_MUC_VANG_DO>,<ID_KENH_BAN_HANG>,<ID_SHIPPING_PROFILE>,1.5L,CW-MAU-DO-1500,true,false,1650000,Dung tích,1.5L
+vang-trang-mau-demo,Vang trắng mẫu Demo,Mẫu import,Rượu vang trắng dùng để thử import,published,true,<ID_DANH_MUC_VANG_TRANG>,<ID_KENH_BAN_HANG>,<ID_SHIPPING_PROFILE>,750ml,CW-MAU-TRANG-750,true,false,720000,Dung tích,750ml
