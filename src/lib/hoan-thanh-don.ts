@@ -41,6 +41,22 @@ interface KetQuaBuoc {
   canh_bao: string[];
 }
 
+/**
+ * Số còn phải xuất kho của từng dòng hàng = số đặt − số đã xuất kho.
+ *
+ * Tính theo phần CÒN LẠI chứ không hỏi "đơn đã có fulfillment chưa": đơn mới
+ * xuất kho một phần (3 chai, mới Fulfill 2) vẫn được xuất nốt trước khi đóng.
+ */
+export function dongCanXuatKho(items: any[] | null | undefined): { id: string; quantity: number }[] {
+  return (items ?? [])
+    .map((it: any) => {
+      const daDat = Number(it?.quantity ?? it?.detail?.quantity) || 0;
+      const daXuat = Number(it?.detail?.fulfilled_quantity) || 0;
+      return { id: it?.id, quantity: daDat - daXuat };
+    })
+    .filter((it) => it.id && it.quantity > 0);
+}
+
 export interface KetQuaHoanThanhDon {
   status: number;
   body: Record<string, unknown>;
@@ -108,8 +124,9 @@ export async function hoanThanhDon(
       entity: "order",
       fields: [
         "id", "status", "total", "currency_code",
-        "items.id", "items.quantity", "items.detail.*",
-        "fulfillments.id",
+        // Medusa 2.17: chọn lẻ `items.quantity` thì nhận về rỗng — số lượng chỉ
+        // được tính khi lấy cả dòng hàng (`items.*`). `detail` có số đã xuất kho.
+        "items.*", "items.detail.*",
         "payment_collections.id", "payment_collections.status",
         "payment_collections.payments.id", "payment_collections.payments.captured_at",
       ],
@@ -151,24 +168,21 @@ export async function hoanThanhDon(
       }
     }
 
-    // ---- 2. Tạo fulfillment ----
-    const daCoFulfillment = (order.fulfillments ?? []).length > 0;
-    if (daCoFulfillment) {
+    // ---- 2. Xuất kho (tạo fulfillment) cho phần còn chưa xuất ----
+    if ((order.items ?? []).length === 0) {
+      throw new Error("Đơn không có dòng hàng nào — không thể duyệt hoàn thành.");
+    }
+    const items = dongCanXuatKho(order.items);
+    if (items.length === 0) {
       buoc.created_fulfillment = true;
-      buoc.canh_bao.push("Đơn đã có fulfillment từ trước — không tạo thêm.");
+      buoc.canh_bao.push("Đơn đã xuất kho đủ từ trước — không tạo thêm.");
     } else {
-      const items = (order.items ?? [])
-        .map((it: any) => ({ id: it.id, quantity: Number(it.quantity) || 0 }))
-        .filter((it: any) => it.quantity > 0);
-
-      if (items.length === 0) {
-        buoc.canh_bao.push("Đơn không có dòng hàng nào để giao — bỏ qua fulfillment.");
-      } else {
-        await createOrderFulfillmentWorkflow(req.scope).run({
-          input: { order_id, items },
-        });
-        buoc.created_fulfillment = true;
-      }
+      // Lỗi ở đây ném ra ngoài: hàng chưa xuất kho thì KHÔNG đóng đơn,
+      // nhật ký ghi LOI để nhân viên bấm Duyệt lại.
+      await createOrderFulfillmentWorkflow(req.scope).run({
+        input: { order_id, items },
+      });
+      buoc.created_fulfillment = true;
     }
 
     // ---- 3. Hoàn thành đơn ----
