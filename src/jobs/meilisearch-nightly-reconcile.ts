@@ -1,13 +1,6 @@
 import type { MedusaContainer } from "@medusajs/framework";
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
-import {
-  docTrangSanPham,
-  dayLenMeili,
-  xoaKhoiMeili,
-  docToanBoIdTrongIndex,
-  layPool,
-  TaiLieuSanPham,
-} from "../lib/meili-sync";
+import { doiSoatMeili } from "../lib/meili-dong-bo-toan-bo";
 
 /**
  * Đối soát Meilisearch hằng đêm (ADR-012) — lưới an toàn cuối cùng.
@@ -32,99 +25,32 @@ import {
  * không ai biết đồng bộ đang hỏng.
  */
 
-const LO_DOC = 500;   // số sản phẩm đọc mỗi trang từ PostgreSQL
-const LO_DAY = 500;   // số document đẩy mỗi lô lên Meilisearch
-
 export default async function meilisearchNightlyReconcileJob(container: MedusaContainer) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
-  const batDau = Date.now();
-
   logger.info("[MeiliReconcile] Bắt đầu đối soát đêm...");
 
   try {
-    // --- Bước 1: tổng số sản phẩm published, để đối chiếu cuối cùng ---
-    const dem = await layPool().query(
-      `SELECT COUNT(*)::int AS n FROM product WHERE deleted_at IS NULL AND status = 'published'`
-    );
-    const tongTrongMedusa: number = dem.rows[0]?.n ?? 0;
-    logger.info(`[MeiliReconcile] Medusa có ${tongTrongMedusa} sản phẩm published.`);
-
-    // --- Bước 2: ảnh chụp hiện trạng index ---
-    const trongIndex = await docToanBoIdTrongIndex();
-    logger.info(`[MeiliReconcile] Meilisearch đang có ${trongIndex.size} document.`);
-
-    // --- Bước 3: duyệt toàn bộ Medusa theo trang, so từng sản phẩm ---
-    const daThay = new Set<string>();
-    let themMoi = 0;
-    let capNhat = 0;
-    let khongDoi = 0;
-    let daDoc = 0;
-    let hangCho: TaiLieuSanPham[] = [];
-
-    const dayHangCho = async () => {
-      if (hangCho.length === 0) return;
-      await dayLenMeili(hangCho);
-      hangCho = [];
-    };
-
-    for (let offset = 0; ; offset += LO_DOC) {
-      const trang = await docTrangSanPham(LO_DOC, offset);
-      if (trang.length === 0) break;
-      daDoc += trang.length;
-
-      for (const doc of trang) {
-        daThay.add(doc.id);
-        const uaTrongIndex = trongIndex.get(doc.id);
-
-        if (uaTrongIndex === undefined) {
-          themMoi++;
-          hangCho.push(doc);
-        } else if (uaTrongIndex !== doc.updated_at) {
-          capNhat++;
-          hangCho.push(doc);
-        } else {
-          khongDoi++;
-        }
-
-        if (hangCho.length >= LO_DAY) await dayHangCho();
-      }
-
-      if (trang.length < LO_DOC) break;
-    }
-    await dayHangCho();
-
-    // --- Bước 4: xoá document mồ côi (có trong index, không còn published) ---
-    const moCoi: string[] = [];
-    for (const id of trongIndex.keys()) {
-      if (!daThay.has(id)) moCoi.push(id);
-    }
-    for (let i = 0; i < moCoi.length; i += LO_DAY) {
-      await xoaKhoiMeili(moCoi.slice(i, i + LO_DAY));
-    }
-
-    // --- Bước 5: kết luận và cảnh báo ---
-    const tongLech = themMoi + capNhat + moCoi.length;
-    const tyLeLech = tongTrongMedusa > 0 ? (tongLech / tongTrongMedusa) * 100 : 0;
-    const giay = Math.round((Date.now() - batDau) / 1000);
+    // Logic đối soát nằm ở lib, dùng chung với nút "Đồng bộ toàn bộ" trong admin.
+    const kq = await doiSoatMeili();
 
     logger.info(
-      `[MeiliReconcile] Xong sau ${giay}s. Đã đọc ${daDoc}/${tongTrongMedusa} sản phẩm. ` +
-      `Lệch: thêm ${themMoi}, cập nhật ${capNhat}, xoá mồ côi ${moCoi.length} ` +
-      `(tổng ${tongLech} = ${tyLeLech.toFixed(2)}%). Khớp sẵn: ${khongDoi}.`
+      `[MeiliReconcile] Xong sau ${kq.giay}s. Đã đọc ${kq.da_doc}/${kq.tong_trong_medusa} sản phẩm. ` +
+      `Lệch: thêm ${kq.them_moi}, cập nhật ${kq.cap_nhat}, xoá mồ côi ${kq.xoa_mo_coi} ` +
+      `(${kq.ty_le_lech.toFixed(2)}%). Khớp sẵn: ${kq.khop_san}.`
     );
 
     // Đọc thiếu = phân trang hỏng. Phải kêu to, đây đúng là lỗi bản trước mắc.
-    if (daDoc !== tongTrongMedusa) {
+    if (kq.da_doc !== kq.tong_trong_medusa) {
       logger.error(
-        `[MeiliReconcile] CẢNH BÁO: chỉ đọc được ${daDoc}/${tongTrongMedusa} sản phẩm. ` +
+        `[MeiliReconcile] CẢNH BÁO: chỉ đọc được ${kq.da_doc}/${kq.tong_trong_medusa} sản phẩm. ` +
         `Phân trang có vấn đề — KHÔNG được coi lần đối soát này là thành công.`
       );
     }
 
     // Ngưỡng 0,5% theo tài liệu 04 §5.3.
-    if (tyLeLech > 0.5) {
+    if (kq.ty_le_lech > 0.5) {
       logger.error(
-        `[MeiliReconcile] CẢNH BÁO: tỷ lệ lệch ${tyLeLech.toFixed(2)}% vượt ngưỡng 0,5%. ` +
+        `[MeiliReconcile] CẢNH BÁO: tỷ lệ lệch ${kq.ty_le_lech.toFixed(2)}% vượt ngưỡng 0,5%. ` +
         `Nhiều khả năng subscriber đang rơi sự kiện — cần kiểm tra ngay.`
       );
     }
