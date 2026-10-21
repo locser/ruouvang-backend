@@ -131,8 +131,8 @@ const ANH_RAC = [
   "photo-1598440947619", // mọi sản phẩm Hasaki của bản cào cũ
 ]
 
-/** Thư mục chứa JSONL. Repo được mount vào /app trong container backend. */
-const THU_MUC_DATA = "/app/scripts/scrapers/data"
+/** Thư mục chứa JSONL — nằm trong repo backend, cwd là gốc backend (local) hoặc /app (container). */
+const THU_MUC_DATA = path.resolve(process.cwd(), "scripts/scrapers/data")
 
 /**
  * Dấu đóng vào metadata của mọi danh mục do script này tạo.

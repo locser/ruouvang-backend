@@ -46,25 +46,30 @@ import {
 import * as fs from "fs"
 import * as path from "path"
 
-// Dùng đúng module quy tắc của storefront/sitemap. `require` có khai kiểu tại
-// chỗ để TypeScript backend không kéo mã ngoài `rootDir` vào đầu ra biên dịch.
-const quyTacSanPham = require("../../../storefront-cwwines/src/lib/san-pham-ban-duoc") as {
-  TY_GIA_AUD_VND: number
-  audSangVnd: (giaAud: unknown) => number
-  bienTheBanDuoc: (bienThe: { priceAud?: unknown; price?: unknown }) => boolean
-  sanPhamBanDuoc: (sanPham: {
-    priceAud?: unknown
-    price?: unknown
-    variants?: Array<{ priceAud?: unknown; price?: unknown }>
-  }) => boolean
-}
-const { audSangVnd, bienTheBanDuoc, sanPhamBanDuoc } = quyTacSanPham
+// Quy tắc catalog (giá AUD → VND, biến thể bán được) — bản sao trong backend để
+// seed chạy được trong image: image backend không chứa repo storefront.
+import {
+  TY_GIA_AUD_VND as TY_GIA_AUD_VND_GOC,
+  audSangVnd,
+  bienTheBanDuoc,
+  sanPhamBanDuoc,
+} from "../lib/san-pham-ban-duoc"
 
-const THU_MUC_DATA = "/app/scripts/scrapers/data"
-export const TY_GIA_AUD_VND = quyTacSanPham.TY_GIA_AUD_VND
 const FILE_SAN_PHAM = "cwwines-products.jsonl"
 const FILE_DANH_MUC = "cwwines-categories.json"
 const FILE_THEME = "cwwines-theme.json"
+
+// Dữ liệu cào nằm trong repo backend: scripts/scrapers/data.
+// Chạy local (cwd = ruouvang-backend) và trong image (cwd = /app) đều trỏ đúng một chỗ.
+const UNG_VIEN_THU_MUC_DATA = [
+  path.resolve(process.cwd(), "scripts/scrapers/data"),
+  "/app/scripts/scrapers/data",
+]
+const THU_MUC_DATA =
+  UNG_VIEN_THU_MUC_DATA.find((p) => fs.existsSync(path.join(p, FILE_SAN_PHAM))) ??
+  UNG_VIEN_THU_MUC_DATA[0]
+
+export const TY_GIA_AUD_VND = TY_GIA_AUD_VND_GOC
 
 const TEN_SHOP = "C.W. Wines"
 const TEN_KENH_BAN = "C.W. Wines Storefront"

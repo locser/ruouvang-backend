@@ -1,0 +1,731 @@
+{
+  "_ghiChu": [
+    "Cào tự động từ CSS :root, stylesheet và DOM thật của cwwines.com.",
+    "computedStyleBrowser lấy bằng Chrome headless khi máy có Chrome; computedStyleCss là bản dự phòng từ biến CSS thật."
+  ],
+  "nguon": "https://www.cwwines.com",
+  "capNhat": "2026-08-18",
+  "cssVariables": {
+    "--colorBtnPrimary": "#111111",
+    "--colorBtnPrimaryLight": "#2b2b2b",
+    "--colorBtnPrimaryDim": "#040404",
+    "--colorBtnPrimaryText": "#ffffff",
+    "--colorCartDot": "#ff4f33",
+    "--colorLink": "#000000",
+    "--colorTextBody": "#000000",
+    "--colorPrice": "#1c1d1d",
+    "--colorTextSavings": "#C20000",
+    "--colorSaleTag": "#1c1d1d",
+    "--colorSaleTagText": "#ffffff",
+    "--colorBody": "#ffffff",
+    "--colorBodyDim": "#f2f2f2",
+    "--colorFooter": "#ffffff",
+    "--colorFooterText": "#000000",
+    "--colorBorder": "#e8e8e1",
+    "--colorNav": "#ffffff",
+    "--colorNavText": "#000000",
+    "--colorAnnouncement": "#0f0f0f",
+    "--colorAnnouncementText": "#ffffff",
+    "--colorHeroText": "#ffffff",
+    "--colorModalBg": "#e6e6e6",
+    "--colorImageOverlay": "#000000",
+    "--colorImageOverlayOpacity": ".1",
+    "--colorImageOverlayTextShadow": ".2",
+    "--colorSmallImageBg": "#ffffff",
+    "--colorLargeImageBg": "#0f0f0f",
+    "--colorGridOverlay": "#000000",
+    "--colorGridOverlayOpacity": "0.1",
+    "--colorDrawers": "#ffffff",
+    "--colorDrawersDim": "#f2f2f2",
+    "--colorDrawerBorder": "#e8e8e1",
+    "--colorDrawerText": "#000000",
+    "--colorDrawerTextDark": "#000000",
+    "--colorDrawerButton": "#111111",
+    "--colorDrawerButtonText": "#ffffff",
+    "--grid-gutter": "22px",
+    "--drawer-gutter": "20px",
+    "--sizeChartMargin": "25px 0",
+    "--sizeChartIconMargin": "5px",
+    "--newsletterReminderPadding": "40px",
+    "--color-body-text": "#000000",
+    "--color-body": "#ffffff",
+    "--typeHeaderPrimary": "\"EB Garamond\"",
+    "--typeHeaderFallback": "serif",
+    "--typeHeaderSize": "36px",
+    "--typeHeaderWeight": "400",
+    "--typeHeaderLineHeight": "1",
+    "--typeHeaderSpacing": "0.0em",
+    "--typeBasePrimary": "\"Work Sans\"",
+    "--typeBaseFallback": "sans-serif",
+    "--typeBaseSize": "14px",
+    "--typeBaseWeight": "300",
+    "--typeBaseSpacing": "0.0em",
+    "--typeBaseLineHeight": "1.8",
+    "--typeCollectionTitle": "20px",
+    "--iconWeight": "2px",
+    "--iconLinecaps": "miter",
+    "--buttonRadius": "0px"
+  },
+  "computedStyleBrowser": {
+    "body": {
+      "color": "rgb(0, 0, 0)",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "fontFamily": "\"Work Sans\", sans-serif",
+      "fontSize": "14px",
+      "fontWeight": "300",
+      "lineHeight": "25.2px",
+      "borderRadius": "0px"
+    },
+    ".header-wrapper": {
+      "color": "rgb(0, 0, 0)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "fontFamily": "\"Work Sans\", sans-serif",
+      "fontSize": "14px",
+      "fontWeight": "300",
+      "lineHeight": "25.2px",
+      "borderRadius": "0px"
+    },
+    ".site-nav__link": {
+      "color": "rgb(255, 255, 255)",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "fontFamily": "\"Work Sans\", sans-serif",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "lineHeight": "28.8px",
+      "borderRadius": "0px"
+    },
+    ".btn": {
+      "color": "rgb(255, 255, 255)",
+      "backgroundColor": "rgb(17, 17, 17)",
+      "fontFamily": "\"Work Sans\", sans-serif",
+      "fontSize": "13px",
+      "fontWeight": "700",
+      "lineHeight": "18.46px",
+      "borderRadius": "0px"
+    },
+    ".site-footer": {
+      "color": "rgb(0, 0, 0)",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "fontFamily": "\"Work Sans\", sans-serif",
+      "fontSize": "14px",
+      "fontWeight": "300",
+      "lineHeight": "25.2px",
+      "borderRadius": "0px"
+    }
+  },
+  "computedStyleCss": {
+    "body": {
+      "color": "#000000",
+      "backgroundColor": "#ffffff",
+      "fontFamily": "\"Work Sans\", sans-serif",
+      "fontSize": "14px",
+      "fontWeight": "300",
+      "lineHeight": "1.8"
+    },
+    "header": {
+      "color": "#000000",
+      "backgroundColor": "#ffffff"
+    },
+    "button": {
+      "color": "#ffffff",
+      "backgroundColor": "#111111",
+      "borderRadius": "0px"
+    },
+    "footer": {
+      "color": "#000000",
+      "backgroundColor": "#ffffff"
+    }
+  },
+  "thuongHieu": {
+    "ten": "C.W. Wines",
+    "tenDayDu": "C.W. Wines",
+    "tieuDe": "CW Wines",
+    "moTa": "Our winery is family-owned, and family-operated. We carefully craft our wines to take customers on a taste-adventure to discover some of Australia's great wine regions: the Coonawarra, the Limestone Coast, the McLaren Vale, and the Barossa Valley.",
+    "logo": "https://www.cwwines.com/cdn/shop/files/CW-Wines-Logo-Files_CW-Wines-Logo-Black_170x.png?v=1738892682",
+    "hotline": "",
+    "wineSchool": ""
+  },
+  "mau": {
+    "primary": "#111111",
+    "priceColor": "#1c1d1d",
+    "addToCartBg": "#111111",
+    "addToCartText": "#ffffff",
+    "labelColor": "#C20000",
+    "headerCategoryBg": "#ffffff",
+    "headerCategoryColor": "#000000",
+    "subheaderBg": "#0f0f0f",
+    "subheaderColor": "#ffffff",
+    "secondary": "#000000",
+    "textColor": "#000000",
+    "textSecondary": "#666666",
+    "bodyBackground": "#ffffff",
+    "borderColor": "#e8e8e1",
+    "footerBg": "#ffffff",
+    "footerColor": "#000000",
+    "topBannerBg": "#0f0f0f",
+    "productPromotionBg": "#C20000",
+    "couponBorder": "#e8e8e1",
+    "couponButton": "#111111",
+    "salePop": "#C20000",
+    "linkColor": "#000000"
+  },
+  "chuVietiet": {
+    "than": "\"Work Sans\", sans-serif",
+    "tieuDeSection": "\"EB Garamond\", serif"
+  },
+  "kichThuoc": {
+    "container": 1300,
+    "containerPadding": 24,
+    "tieuDeSection": {
+      "size": 36,
+      "weight": 400,
+      "lineHeight": "1"
+    },
+    "theTenSanPham": {
+      "size": 14,
+      "weight": 400,
+      "lineHeight": 20
+    },
+    "theGia": {
+      "size": 16,
+      "weight": 600,
+      "lineHeight": 24
+    },
+    "tyLeAnhSanPham": "1/1"
+  },
+  "thanhTrenCung": {
+    "nen": "#0f0f0f",
+    "dienThoai": "",
+    "khuyenMai": "AUSTRALIAN WINE, DELIVERED",
+    "khuyenMaiLink": "/danh-muc/welcome20-discount",
+    "coDoiNgonNgu": true
+  },
+  "camKet": [
+    "Rượu vang Australia chính hãng",
+    "Danh mục từ nhiều nhà rượu",
+    "Giao hàng an toàn",
+    "Tư vấn chọn rượu"
+  ],
+  "camKetEn": [
+    "Authentic Australian wines",
+    "A portfolio of trusted producers",
+    "Safe delivery",
+    "Wine selection advice"
+  ],
+  "anh": {
+    "slider": [
+      "https://www.cwwines.com/cdn/shop/files/CW-wines_150DPI_103A9132_1800x.jpg?v=1738879270",
+      "https://www.cwwines.com/cdn/shop/files/CW-wines_150DPI_103A9173_1800x.jpg?v=1738892254",
+      "https://www.cwwines.com/cdn/shop/files/Schild-01-REV-C_1800x.jpg?v=1738892274",
+      "https://www.cwwines.com/cdn/shop/files/Cape_Barron_01_1800x.jpg?v=1727736796"
+    ],
+    "bannerCus": [
+      "https://www.cwwines.com/cdn/shop/files/Bone-Dry-02-REV-C_1800x.jpg?v=1738892311",
+      "https://www.cwwines.com/cdn/shop/files/Stonehaven-20185-1-1x1Edit_1800x.jpg?v=1727736772",
+      "https://www.cwwines.com/cdn/shop/files/CW_Wine_Web_Pup_800x800_59205119-959e-4f8b-80b3-10aa0e855e22_1800x.jpg?v=1678316671",
+      "https://www.cwwines.com/cdn/shop/files/CW-wines_150DPI_103A9132_300x.jpg?v=1738879270",
+      "https://www.cwwines.com/cdn/shop/files/CW-wines_150DPI_103A9173_300x.jpg?v=1738892254"
+    ],
+    "bannerHot": "https://www.cwwines.com/cdn/shop/files/Schild-01-REV-C_300x.jpg?v=1738892274",
+    "camKetIcon": [],
+    "thuongHieu": [
+      "https://www.cwwines.com/cdn/shop/files/CW-Wines-Logo-Files_CW-Wines-Logo-Black_170x.png?v=1738892682",
+      "https://www.cwwines.com/cdn/shop/files/CW-Wines-Logo-Files_CW-Wines-Logo-Black_110x.png?v=1738892682",
+      "https://www.cwwines.com/cdn/shop/files/CW-Wines-Logo-Files_CW-Wines-Logo-White_170x.png?v=1738892750",
+      "https://www.cwwines.com/cdn/shop/files/CW-Wines-Logo-Files_CW-Wines-Logo-White_110x.png?v=1738892750"
+    ]
+  },
+  "khuyenMai": {
+    "ma": "WELCOME20",
+    "tieuDe": "Đơn hàng đầu tiên",
+    "giamToiDa": "500.000đ",
+    "donToiThieu": "0đ",
+    "phanTram": 20,
+    "giamToiDaVnd": 500000,
+    "donToiThieuVnd": 0,
+    "_ghiChu": "Suy ra từ collection handle welcome20-discount; cần xác nhận điều kiện khi deploy."
+  },
+  "trangChu": [
+    {
+      "loai": "slider"
+    },
+    {
+      "loai": "camKet"
+    },
+    {
+      "loai": "sanPhamTab",
+      "tieuDe": "RƯỢU VANG NỔI BẬT",
+      "tieuDeEn": "FEATURED WINES",
+      "xemTatCa": "welcome20-discount",
+      "tab": [
+        {
+          "ten": "6-Packs",
+          "tenEn": "6-Packs",
+          "danhMuc": "99-6-packs"
+        },
+        {
+          "ten": "All wine",
+          "tenEn": "All wine",
+          "danhMuc": "welcome20-discount"
+        },
+        {
+          "ten": "Autumn Wine Guide",
+          "tenEn": "Autumn Wine Guide",
+          "danhMuc": "autumn-wine-guide"
+        }
+      ]
+    }
+  ],
+  "menu": [
+    {
+      "ten": "Shop",
+      "tenEn": "Shop",
+      "handle": "all",
+      "cot": []
+    },
+    {
+      "ten": "Club Packs",
+      "tenEn": "Club Packs",
+      "handle": "club-packs",
+      "cot": []
+    },
+    {
+      "ten": "Reschke",
+      "tenEn": "Reschke",
+      "handle": "reschke",
+      "cot": []
+    },
+    {
+      "ten": "6-Packs",
+      "tenEn": "6-Packs",
+      "handle": "99-6-packs",
+      "cot": []
+    },
+    {
+      "ten": "All wine",
+      "tenEn": "All wine",
+      "handle": "welcome20-discount",
+      "cot": []
+    },
+    {
+      "ten": "Autumn Wine Guide",
+      "tenEn": "Autumn Wine Guide",
+      "handle": "autumn-wine-guide",
+      "cot": []
+    },
+    {
+      "ten": "Black Friday",
+      "tenEn": "Black Friday",
+      "handle": "all-discount-blackfriday",
+      "cot": []
+    },
+    {
+      "ten": "BLACK FRIDAY 2025",
+      "tenEn": "BLACK FRIDAY 2025",
+      "handle": "black-friday-2025",
+      "cot": []
+    },
+    {
+      "ten": "Boisterous",
+      "tenEn": "Boisterous",
+      "handle": "boisterous",
+      "cot": []
+    },
+    {
+      "ten": "Bone Dry",
+      "tenEn": "Bone Dry",
+      "handle": "bone-dry",
+      "cot": []
+    },
+    {
+      "ten": "Bone Dry - Adelaide500",
+      "tenEn": "Bone Dry - Adelaide500",
+      "handle": "bone-dry-adelaide500",
+      "cot": []
+    },
+    {
+      "ten": "Bone Dry Bottles",
+      "tenEn": "Bone Dry Bottles",
+      "handle": "bone-dry-bottles",
+      "cot": []
+    },
+    {
+      "ten": "Cape Barren",
+      "tenEn": "Cape Barren",
+      "handle": "cape-barren",
+      "cot": []
+    },
+    {
+      "ten": "CW Winemaker Series",
+      "tenEn": "CW Winemaker Series",
+      "handle": "cw-winemaker-series",
+      "cot": []
+    },
+    {
+      "ten": "Dem Bones",
+      "tenEn": "Dem Bones",
+      "handle": "dem-bones",
+      "cot": []
+    },
+    {
+      "ten": "Discount Eligible",
+      "tenEn": "Discount Eligible",
+      "handle": "discount-eligible",
+      "cot": []
+    },
+    {
+      "ten": "EOFY 2026",
+      "tenEn": "EOFY 2026",
+      "handle": "eofy-2026",
+      "cot": []
+    },
+    {
+      "ten": "Glenunga FC",
+      "tenEn": "Glenunga FC",
+      "handle": "glenunga-fc",
+      "cot": []
+    },
+    {
+      "ten": "Guide Dogs",
+      "tenEn": "Guide Dogs",
+      "handle": "guide-dogs",
+      "cot": []
+    },
+    {
+      "ten": "Home page",
+      "tenEn": "Home page",
+      "handle": "frontpage",
+      "cot": []
+    },
+    {
+      "ten": "King Tide",
+      "tenEn": "King Tide",
+      "handle": "king-tide",
+      "cot": []
+    },
+    {
+      "ten": "Kips Club",
+      "tenEn": "Kips Club",
+      "handle": "kips-club",
+      "cot": []
+    },
+    {
+      "ten": "Limited Vineyard Release",
+      "tenEn": "Limited Vineyard Release",
+      "handle": "limited-vineyard-release",
+      "cot": []
+    },
+    {
+      "ten": "Lustre Collection",
+      "tenEn": "Lustre Collection",
+      "handle": "lustre-collection",
+      "cot": []
+    },
+    {
+      "ten": "PAFC Member Offer",
+      "tenEn": "PAFC Member Offer",
+      "handle": "pafc-member-offer",
+      "cot": []
+    },
+    {
+      "ten": "Peeping Tom",
+      "tenEn": "Peeping Tom",
+      "handle": "peeping-tom",
+      "cot": []
+    },
+    {
+      "ten": "Port Adelaide Offers",
+      "tenEn": "Port Adelaide Offers",
+      "handle": "port-adelaide-offeres",
+      "cot": []
+    },
+    {
+      "ten": "Quarry Collection",
+      "tenEn": "Quarry Collection",
+      "handle": "quarry",
+      "cot": []
+    },
+    {
+      "ten": "Reschke Armenta",
+      "tenEn": "Reschke Armenta",
+      "handle": "reschke-armenta",
+      "cot": []
+    },
+    {
+      "ten": "Reschke Bos",
+      "tenEn": "Reschke Bos",
+      "handle": "reschke-bos",
+      "cot": []
+    },
+    {
+      "ten": "Reschke Bull Trader Wines",
+      "tenEn": "Reschke Bull Trader Wines",
+      "handle": "reschke-bull-trader-wines",
+      "cot": []
+    },
+    {
+      "ten": "Reschke CBA",
+      "tenEn": "Reschke CBA",
+      "handle": "reschke-comm-bank",
+      "cot": []
+    },
+    {
+      "ten": "Reschke Cellar Reserve",
+      "tenEn": "Reschke Cellar Reserve",
+      "handle": "reschke-cellar-reserve",
+      "cot": []
+    },
+    {
+      "ten": "Reschke R-Series Wines",
+      "tenEn": "Reschke R-Series Wines",
+      "handle": "reschke-r-series-wines",
+      "cot": []
+    },
+    {
+      "ten": "Reschke R.S.R",
+      "tenEn": "Reschke R.S.R",
+      "handle": "reschke-rsr",
+      "cot": []
+    },
+    {
+      "ten": "Reschke Vitulus",
+      "tenEn": "Reschke Vitulus",
+      "handle": "reschke-vitulus",
+      "cot": []
+    },
+    {
+      "ten": "Ribbon",
+      "tenEn": "Ribbon",
+      "handle": "ribbon",
+      "cot": []
+    },
+    {
+      "ten": "Schild CBA",
+      "tenEn": "Schild CBA",
+      "handle": "schild-cba",
+      "cot": []
+    },
+    {
+      "ten": "Schild Estate",
+      "tenEn": "Schild Estate",
+      "handle": "schild-estate",
+      "cot": []
+    },
+    {
+      "ten": "Schild Estate Premium",
+      "tenEn": "Schild Estate Premium",
+      "handle": "schild-estate-premium",
+      "cot": []
+    },
+    {
+      "ten": "Schild Estate Range",
+      "tenEn": "Schild Estate Range",
+      "handle": "schild-estate-select-wine-club",
+      "cot": []
+    },
+    {
+      "ten": "Schild Estate Vineyard Collection",
+      "tenEn": "Schild Estate Vineyard Collection",
+      "handle": "schild-estate-vineyard-collection",
+      "cot": []
+    },
+    {
+      "ten": "Schild Estate x Enoteca NFWF 2026",
+      "tenEn": "Schild Estate x Enoteca NFWF 2026",
+      "handle": "schild-estate-x-enoteca-nfwf-2026",
+      "cot": []
+    },
+    {
+      "ten": "Schild Narrow Road",
+      "tenEn": "Schild Narrow Road",
+      "handle": "schild-narrow-road",
+      "cot": []
+    },
+    {
+      "ten": "Schild Pramie",
+      "tenEn": "Schild Pramie",
+      "handle": "schild-estate-premium-release",
+      "cot": []
+    },
+    {
+      "ten": "Schoolhouse",
+      "tenEn": "Schoolhouse",
+      "handle": "schoolhouse",
+      "cot": []
+    },
+    {
+      "ten": "Starling",
+      "tenEn": "Starling",
+      "handle": "starling",
+      "cot": []
+    },
+    {
+      "ten": "Stepping Stone",
+      "tenEn": "Stepping Stone",
+      "handle": "stepping-stone",
+      "cot": []
+    },
+    {
+      "ten": "Stonehaven",
+      "tenEn": "Stonehaven",
+      "handle": "stonehaven",
+      "cot": []
+    },
+    {
+      "ten": "Stonehaven CBA",
+      "tenEn": "Stonehaven CBA",
+      "handle": "stonehaven-cba",
+      "cot": []
+    },
+    {
+      "ten": "Stonehaven Reserve",
+      "tenEn": "Stonehaven Reserve",
+      "handle": "stonehaven-reserve",
+      "cot": []
+    },
+    {
+      "ten": "Ulithorne",
+      "tenEn": "Ulithorne",
+      "handle": "ulithorne",
+      "cot": []
+    },
+    {
+      "ten": "Ulithorne CBA",
+      "tenEn": "Ulithorne CBA",
+      "handle": "ulithorne-comm-bank",
+      "cot": []
+    },
+    {
+      "ten": "Ulithorne Eligere",
+      "tenEn": "Ulithorne Eligere",
+      "handle": "ulithorne-eligere",
+      "cot": []
+    },
+    {
+      "ten": "Ulithorne Humilis",
+      "tenEn": "Ulithorne Humilis",
+      "handle": "ulithorne-humilis",
+      "cot": []
+    },
+    {
+      "ten": "Ulithorne Medius",
+      "tenEn": "Ulithorne Medius",
+      "handle": "ulithorne-medius",
+      "cot": []
+    },
+    {
+      "ten": "Ulithorne Paternus",
+      "tenEn": "Ulithorne Paternus",
+      "handle": "ulithorne-paternus",
+      "cot": []
+    },
+    {
+      "ten": "Vivino Collection",
+      "tenEn": "Vivino Collection",
+      "handle": "vivino-collection",
+      "cot": []
+    }
+  ],
+  "footer": {
+    "cot": [
+      {
+        "tieuDe": "THÔNG TIN",
+        "tieuDeEn": "INFORMATION",
+        "muc": [
+          {
+            "ten": "Giới thiệu",
+            "tenEn": "About us",
+            "duongDan": "/chinh-sach/about-cw"
+          },
+          {
+            "ten": "Liên hệ",
+            "tenEn": "Contact",
+            "duongDan": "/chinh-sach/contact"
+          },
+          {
+            "ten": "Tin mới",
+            "tenEn": "Latest news",
+            "duongDan": "/blog"
+          }
+        ]
+      },
+      {
+        "tieuDe": "SẢN PHẨM",
+        "tieuDeEn": "PRODUCTS",
+        "muc": [
+          {
+            "ten": "6-Packs",
+            "tenEn": "6-Packs",
+            "duongDan": "/danh-muc/99-6-packs"
+          },
+          {
+            "ten": "All wine",
+            "tenEn": "All wine",
+            "duongDan": "/danh-muc/welcome20-discount"
+          },
+          {
+            "ten": "Autumn Wine Guide",
+            "tenEn": "Autumn Wine Guide",
+            "duongDan": "/danh-muc/autumn-wine-guide"
+          },
+          {
+            "ten": "Black Friday",
+            "tenEn": "Black Friday",
+            "duongDan": "/danh-muc/all-discount-blackfriday"
+          },
+          {
+            "ten": "BLACK FRIDAY 2025",
+            "tenEn": "BLACK FRIDAY 2025",
+            "duongDan": "/danh-muc/black-friday-2025"
+          },
+          {
+            "ten": "Boisterous",
+            "tenEn": "Boisterous",
+            "duongDan": "/danh-muc/boisterous"
+          },
+          {
+            "ten": "Bone Dry",
+            "tenEn": "Bone Dry",
+            "duongDan": "/danh-muc/bone-dry"
+          }
+        ]
+      },
+      {
+        "tieuDe": "HỖ TRỢ KHÁCH HÀNG",
+        "tieuDeEn": "CUSTOMER SUPPORT",
+        "muc": [
+          {
+            "ten": "Chính sách bảo mật",
+            "tenEn": "Privacy policy",
+            "duongDan": "/chinh-sach/privacy-policy"
+          },
+          {
+            "ten": "Điều khoản",
+            "tenEn": "Terms & conditions",
+            "duongDan": "/chinh-sach/terms-conditions"
+          }
+        ]
+      }
+    ],
+    "banQuyen": "© Bản quyền thuộc về C.W. Wines",
+    "banQuyenEn": "© Copyright C.W. Wines"
+  },
+  "chanTuoi": {
+    "batBuoc": true,
+    "tuoiToiThieu": 18,
+    "vi": {
+      "tieuDe": "VUI LÒNG XÁC NHẬN ĐỘ TUỔI.",
+      "hoi": "BẠN ĐÃ ĐỦ 18 TUỔI?",
+      "dong": "ĐỦ 18 TUỔI",
+      "tu_choi": "CHƯA 18 TUỔI",
+      "ghiChu": "Website chỉ giới thiệu sản phẩm có cồn tới người từ 18 tuổi."
+    },
+    "en": {
+      "tieuDe": "PLEASE CONFIRM YOUR AGE.",
+      "hoi": "ARE YOU 18 OR OLDER?",
+      "dong": "18 & ABOVE",
+      "tu_choi": "UNDER 18",
+      "ghiChu": "This website presents alcoholic products only to people aged 18 or older."
+    }
+  }
+}

@@ -14,7 +14,8 @@ import * as path from "path"
 import { BLOG_MODULE } from "../modules/blog"
 import type BlogModuleService from "../modules/blog/service"
 
-const FILE_BLOG = "/app/scripts/scrapers/data/cwwines-blog.json"
+// Dữ liệu cào nằm trong repo backend: scripts/scrapers/data.
+const FILE_BLOG = path.resolve(process.cwd(), "scripts/scrapers/data/cwwines-blog.json")
 
 interface BaiCao {
   handle: string

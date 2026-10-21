@@ -45,7 +45,8 @@ import {
 import * as fs from "fs"
 import * as path from "path"
 
-const THU_MUC_DATA = "/app/scripts/scrapers/data"
+// Dữ liệu cào nằm trong repo backend: scripts/scrapers/data.
+const THU_MUC_DATA = path.resolve(process.cwd(), "scripts/scrapers/data")
 const FILE_SAN_PHAM = "redapron-products.jsonl"
 const FILE_DANH_MUC = "redapron-categories.json"
 const FILE_THEME = "redapron-theme.json"
