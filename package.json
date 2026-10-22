@@ -15,8 +15,9 @@
   "scripts": {
     "build": "medusa build",
     "migrate": "node --env-file-if-exists=.env scripts/chay-medusa.cjs db:migrate",
-    "start": "pnpm run migrate && node --env-file-if-exists=.env scripts/chay-medusa.cjs start",
-    "dev": "pnpm run migrate && node --env-file-if-exists=.env scripts/chay-medusa.cjs develop",
+    "bootstrap:admin": "node --env-file-if-exists=.env scripts/chay-medusa.cjs exec ./src/scripts/bootstrap-admin.ts",
+    "start": "pnpm run migrate && pnpm run bootstrap:admin && node --env-file-if-exists=.env scripts/chay-medusa.cjs start",
+    "dev": "pnpm run migrate && pnpm run bootstrap:admin && node --env-file-if-exists=.env scripts/chay-medusa.cjs develop",
     "lint": "medusa lint",
     "test:e2e:dong-bo-meili": "node --env-file-if-exists=.env scripts/chay-medusa.cjs exec ./src/scripts/e2e-dong-bo-meili.ts",
     "test:e2e:duyet-don": "node --env-file-if-exists=.env scripts/chay-medusa.cjs exec ./src/scripts/e2e-duyet-hoan-thanh.ts",
