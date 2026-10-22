@@ -6,7 +6,8 @@ import { checkAuth } from "../../../lib/ai-auth";
  * Cập nhật kho (cap_nhat_kho).
  *  - setQuantity: đặt tồn kho tuyệt đối tại location.
  *  - quantityChange: cộng/trừ tương đối (+/-).
- * Biên độ (max_inventory_change) đã được kiểm ở tầng AI Daemon trước khi gọi route này.
+ * Luồng Telegram yêu cầu nhân viên bấm xác nhận. Route vẫn tự kiểm kiểu và một
+ * trần kỹ thuật để request nội bộ lỗi không thể làm biến động kho vô hạn.
  */
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   if (!checkAuth(req)) {
@@ -19,6 +20,12 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     locationId?: string;
   };
   if (!sku) return res.status(400).json({ error: "Thiếu sku" });
+  if (typeof setQuantity === "number" && (!Number.isInteger(setQuantity) || setQuantity < 0 || setQuantity > 100_000_000)) {
+    return res.status(400).json({ error: "setQuantity phải là số nguyên từ 0 đến 100.000.000." });
+  }
+  if (quantityChange !== undefined && (!Number.isInteger(quantityChange) || !quantityChange || Math.abs(quantityChange) > 100_000)) {
+    return res.status(400).json({ error: "quantityChange phải là số nguyên khác 0 và không vượt quá 100.000 mỗi lần." });
+  }
 
   try {
     const inventory: any = req.scope.resolve(Modules.INVENTORY);

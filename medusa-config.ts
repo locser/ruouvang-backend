@@ -102,6 +102,11 @@ module.exports = defineConfig({
       resolve: "./src/modules/nhat-ky",
     },
 
+    // ---- Khách tiềm năng — người chưa mua nhưng đã để lại số cho nhân viên gọi ----
+    {
+      resolve: "./src/modules/khach-tiem-nang",
+    },
+
     // ---- Cài đặt cửa hàng (hotline, ngân hàng, SMTP...) — bảng app_settings của Medusa ----
     {
       resolve: "./src/modules/app-settings",
