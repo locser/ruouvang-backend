@@ -36,3 +36,13 @@ describe("POST /ai/products-lookup status", () => {
     expect((await run({ status: "all" })).code).toBe(400);
   });
 });
+
+describe("POST /ai/products-lookup giá gốc", () => {
+  it("SQL chỉ join giá VND gốc: không price list, rules_count = 0", async () => {
+    await run({ ids: ["p1"] });
+    const sql = String(mockQuery.mock.calls[0][0]);
+    expect(sql).toContain("pr.price_list_id IS NULL");
+    expect(sql).toContain("pr.rules_count = 0");
+    expect(sql).toContain("pr.deleted_at IS NULL");
+  });
+});

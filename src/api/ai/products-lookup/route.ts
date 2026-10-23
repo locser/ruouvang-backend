@@ -54,9 +54,12 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       FROM product p
       JOIN product_variant pv ON pv.product_id = p.id AND pv.deleted_at IS NULL
       LEFT JOIN product_variant_price_set pvps ON pvps.variant_id = pv.id
+      -- Chỉ giá VND GỐC (không price list, không rule) để mỗi variant ra đúng một dòng.
       LEFT JOIN price pr ON pr.price_set_id = pvps.price_set_id
             AND lower(pr.currency_code) = 'vnd'
             AND pr.deleted_at IS NULL
+            AND pr.price_list_id IS NULL
+            AND pr.rules_count = 0
       LEFT JOIN product_variant_inventory_item pvii ON pvii.variant_id = pv.id
       LEFT JOIN inventory_level il ON il.inventory_item_id = pvii.inventory_item_id
       WHERE p.deleted_at IS NULL

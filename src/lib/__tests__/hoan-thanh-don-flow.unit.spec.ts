@@ -51,6 +51,7 @@ beforeEach(() => {
   metadataFresh = { thanh_toan_trang_thai: "cho_chuyen_khoan", route_khac: "giu" };
   graph.mockImplementation(async ({ fields }: any) => {
     if (fields.includes("items.*")) return { data: [orderMain] };
+    if (fields.includes("status") && fields.length === 2) return { data: [{ id: orderMain.id, status: orderMain.status }] };
     if (fields.includes("payment_collections.payments.amount"))
       return { data: [{ id: orderMain.id, payment_collections: [{ id: "pc", payments: paymentsFresh }] }] };
     return { data: [{ id: orderMain.id, metadata: metadataFresh }] };
@@ -65,7 +66,7 @@ describe("hoanThanhDon - idempotency", () => {
     expect(r.status).toBe(200);
     expect(r.body).toMatchObject({ ok: true, da_xu_ly_truoc_do: true, ket_qua: { a: 1 } });
     expect(calls).toEqual([]);
-    expect(graph).not.toHaveBeenCalled();
+    expect(graph.mock.calls.some((c: any) => c[0].fields.includes("items.*"))).toBe(false);
     expect(lockExecute).not.toHaveBeenCalled();
   });
 
@@ -75,7 +76,7 @@ describe("hoanThanhDon - idempotency", () => {
     const r = await hoanThanhDon(req, "order_ABCDEFGH12");
     expect(r.status).toBe(409);
     expect(calls).toEqual([]);
-    expect(graph).not.toHaveBeenCalled();
+    expect(graph.mock.calls.some((c: any) => c[0].fields.includes("items.*"))).toBe(false);
   });
 
   it("không ghi được nhật ký: 500, không chạy gì", async () => {
@@ -190,11 +191,13 @@ describe("hoanThanhDon - thứ tự bước và buoc_da_xong", () => {
     expect(kq.canh_bao.join(" ")).toContain("Không capture được payment p1");
   });
 
-  it("đơn đã huỷ: 500, không workflow nào", async () => {
+  it("đơn đã huỷ: 409 order_canceled, không workflow, không claim/ghi LOI", async () => {
     orderMain.status = "canceled";
     const r = await hoanThanhDon(req, "order_ABCDEFGH12");
-    expect(r.status).toBe(500);
+    expect(r.status).toBe(409);
+    expect(r.body).toMatchObject({ code: "order_canceled" });
     expect(calls).toEqual([]);
+    expect(raw).not.toHaveBeenCalled();
   });
 
   it("đơn không có dòng hàng: lỗi sau capture, không complete", async () => {

@@ -16,7 +16,7 @@ import { PAYMENT_FIELDS, claimActionLog, withOrderPaymentLock } from "../../../l
  *   `order_cancel|<id>`; đọc lại đơn trong khoá.
  *   Thành công: { ok, mode:"cancel", already:false, display_id, paid_amount, needs_manual_refund, canh_bao }.
  *   Đã huỷ từ trước: 200 cùng các trường tiền, already:true; tính lại tiền và bù nhãn can_hoan_thu_cong nếu thiếu.
- *   paid_amount = captured_amount - refunded_before (>= 0); needs_manual_refund theo captured_amount > 0 hoặc nhãn da_thanh_toan.
+ *   paid_amount = captured_amount - refunded_before (>= 0); nhánh already đọc metadata.can_hoan_so_tien (lưu lúc gắn nhãn; fallback captured_amount); needs_manual_refund theo captured_amount > 0 hoặc nhãn da_thanh_toan.
  *   LƯU Ý TIỀN: provider thanh toán là pp_system_default, refund chỉ GHI SỔ, không có tiền nào
  *   thật sự quay về khách. Vì vậy đơn đã thu tiền (paid_amount > 0 hoặc nhãn da_thanh_toan) được
  *   gắn metadata.thanh_toan_trang_thai = "can_hoan_thu_cong" và needs_manual_refund = true:
@@ -125,10 +125,13 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   };
 
   /** Gắn can_hoan_thu_cong (merge metadata đọc trong khoá). Trả thông báo lỗi nếu ghi hỏng. */
-  const ghiNhan = async (id: string, md: Record<string, unknown>): Promise<string | null> => {
+  const ghiNhan = async (id: string, md: Record<string, unknown>, soTien: number): Promise<string | null> => {
     try {
       const orderModule: any = req.scope.resolve(Modules.ORDER);
-      await orderModule.updateOrders([{ id, metadata: { ...md, thanh_toan_trang_thai: "can_hoan_thu_cong" } }]);
+      // can_hoan_so_tien (VND) lưu lần gắn nhãn đầu để nhánh already còn biết số cần trả (sổ refund đã bù về 0).
+      await orderModule.updateOrders([
+        { id, metadata: { ...md, thanh_toan_trang_thai: "can_hoan_thu_cong", can_hoan_so_tien: soTien } },
+      ]);
       return null;
     } catch (e: any) {
       const m = `Không ghi được nhãn can_hoan_thu_cong: ${e?.message ?? e}`;
@@ -158,15 +161,24 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       const md0 = (order.metadata ?? {}) as Record<string, unknown>;
       const canTay = money.captured > 0 || md0.thanh_toan_trang_thai === "da_thanh_toan";
       const canhBao0: string[] = [];
-      if (canTay && md0.thanh_toan_trang_thai !== "can_hoan_thu_cong") {
-        const loi = await ghiNhan(orderId, md0);
+      let paid = money.paid;
+      const daLuu = Number(md0.can_hoan_so_tien);
+      if (md0.thanh_toan_trang_thai === "can_hoan_thu_cong") {
+        // Số đã lưu lúc huỷ; thiếu (nhãn cũ) thì lấy captured_amount.
+        paid = Number.isFinite(daLuu) && md0.can_hoan_so_tien !== undefined && md0.can_hoan_so_tien !== null && md0.can_hoan_so_tien !== ""
+          ? daLuu
+          : money.captured;
+      } else if (canTay) {
+        // Huỷ ngoài luồng (admin): sổ có thể đã bù refund; số khách đã trả = captured.
+        paid = money.captured;
+        const loi = await ghiNhan(orderId, md0, paid);
         if (loi) canhBao0.push(loi);
       }
       return {
         status: 200,
         body: {
           ok: true, mode: "cancel", already: true, display_id: order.display_id,
-          paid_amount: money.paid, captured_amount: money.captured, refunded_before: money.refunded,
+          paid_amount: paid, captured_amount: money.captured, refunded_before: money.refunded,
           needs_manual_refund: canTay, canh_bao: canhBao0,
         },
       };
@@ -214,7 +226,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     const needsManualRefund = money.captured > 0 || md.thanh_toan_trang_thai === "da_thanh_toan";
     const canhBao: string[] = [];
     if (needsManualRefund) {
-      const loi = await ghiNhan(orderId, md);
+      const loi = await ghiNhan(orderId, md, money.paid);
       if (loi) canhBao.push(loi);
     }
 

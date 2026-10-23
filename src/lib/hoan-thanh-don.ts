@@ -73,6 +73,20 @@ export async function hoanThanhDon(
 
   const idempotencyKey = sha256(`order_complete|${order_id}`);
 
+  // ---- Đơn đã huỷ: chặn sớm, không claim nhật ký, không ghi LOI ----
+  try {
+    const { data: dh } = await query.graph({ entity: "order", fields: ["id", "status"], filters: { id: order_id } });
+    if ((dh?.[0] as any)?.status === "canceled") {
+      return {
+        status: 409,
+        body: { ok: false, error: "Đơn hàng đã bị huỷ — không thể duyệt hoàn thành.", code: "order_canceled" },
+      };
+    }
+  } catch (e: any) {
+    logger.error(`[order-complete] Không đọc được trạng thái đơn ${order_id}: ${e?.message ?? e}`);
+    return { status: 500, body: { error: "Không đọc được đơn hàng" } };
+  }
+
   // ---- Chống bấm trùng (upsert nguyên tử; XONG thì trả kết quả cũ) ----
   try {
     const c = await claimActionLog(

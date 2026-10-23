@@ -70,7 +70,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       return res.status(404).json({ error: "Không tìm thấy tin trong hàng đợi", code: "not_found" });
     }
     return res.status(409).json({
-      error: `Tin đang ở trạng thái ${ton.rows[0].trang_thai}, không phải DANG_GUI, hoặc đã bị giành lại (claimed_at lệch)`,
+      error: "Tin này không còn do bạn giữ (đã gửi xong hoặc đã bị giành lại)",
       code: "not_claimed",
     });
   } catch (e: any) {

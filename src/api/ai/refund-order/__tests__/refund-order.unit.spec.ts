@@ -91,8 +91,8 @@ describe("POST /ai/refund-order - huỷ cả đơn", () => {
       payment_collections: [{ id: "pc", payments: [{ id: "p1", amount: 500, captured_at: "t", captures: [{ amount: 500 }], refunds: [{ amount: 500 }] }] }],
     })] });
     const r = await run();
-    expect(r.body).toMatchObject({ already: true, captured_amount: 500, refunded_before: 500, paid_amount: 0, needs_manual_refund: true });
-    expect(updateOrders.mock.calls[0][0][0].metadata).toEqual({ thanh_toan_trang_thai: "can_hoan_thu_cong", kenh: "x" });
+    expect(r.body).toMatchObject({ already: true, captured_amount: 500, refunded_before: 500, paid_amount: 500, needs_manual_refund: true });
+    expect(updateOrders.mock.calls[0][0][0].metadata).toEqual({ thanh_toan_trang_thai: "can_hoan_thu_cong", can_hoan_so_tien: 500, kenh: "x" });
     expect(lockExecute).toHaveBeenCalled();
     expect(mockCancel).not.toHaveBeenCalled();
   });
@@ -114,6 +114,24 @@ describe("POST /ai/refund-order - huỷ cả đơn", () => {
     const r = await run();
     expect(r.body).toMatchObject({ captured_amount: 500, refunded_before: 120, paid_amount: 380, needs_manual_refund: true });
     expect(graph.mock.calls[0][0].fields).toContain("payment_collections.payments.refunds.amount");
+  });
+
+  it("already + nhãn can_hoan_thu_cong: paid_amount đọc từ can_hoan_so_tien dù sổ đã bù refund", async () => {
+    graph.mockResolvedValue({ data: [order({
+      status: "canceled", metadata: { thanh_toan_trang_thai: "can_hoan_thu_cong", can_hoan_so_tien: 380 },
+      payment_collections: [{ id: "pc", payments: [{ id: "p1", amount: 500, captured_at: "t", captures: [{ amount: 500 }], refunds: [{ amount: 500 }] }] }],
+    })] });
+    const r = await run();
+    expect(r.body).toMatchObject({ already: true, paid_amount: 380, captured_amount: 500, needs_manual_refund: true });
+    expect(updateOrders).not.toHaveBeenCalled();
+  });
+
+  it("already + nhãn cũ thiếu can_hoan_so_tien: fallback captured_amount", async () => {
+    graph.mockResolvedValue({ data: [order({
+      status: "canceled", metadata: { thanh_toan_trang_thai: "can_hoan_thu_cong" },
+      payment_collections: [{ id: "pc", payments: [{ id: "p1", amount: 500, captured_at: "t", captures: [{ amount: 500 }], refunds: [{ amount: 500 }] }] }],
+    })] });
+    expect((await run()).body).toMatchObject({ paid_amount: 500 });
   });
 
   it("completed: 409 order_completed", async () => {
@@ -158,7 +176,7 @@ describe("POST /ai/refund-order - huỷ cả đơn", () => {
     })] });
     const r = await run();
     expect(r.body).toMatchObject({ paid_amount: 500, needs_manual_refund: true });
-    expect(updateOrders.mock.calls[0][0][0].metadata).toEqual({ thanh_toan_trang_thai: "can_hoan_thu_cong", kenh: "x" });
+    expect(updateOrders.mock.calls[0][0][0].metadata).toEqual({ thanh_toan_trang_thai: "can_hoan_thu_cong", can_hoan_so_tien: 500, kenh: "x" });
     expect(mockCancel).toHaveBeenCalled();
   });
 
