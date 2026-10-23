@@ -3,7 +3,7 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 import { NHAT_KY_MODULE } from "../modules/nhat-ky";
 
 export interface MucNhatKy {
-  doi_tuong: "order" | "payment";
+  doi_tuong: "order" | "payment" | "variant" | "promotion";
   doi_tuong_id: string;
   hanh_dong: string;
   truoc?: Record<string, unknown> | null;
