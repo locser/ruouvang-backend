@@ -35,9 +35,12 @@ export default async function setupVanChuyen({ container }: ExecArgs) {
     return;
   }
 
-  const [region] = await regionModuleService.listRegions({}, { take: 1 });
+  const regions = await regionModuleService.listRegions({}, { take: 100 });
+  const region = regions.find(
+    (item) => String(item.currency_code || "").toLowerCase() === "vnd"
+  );
   if (!region) {
-    logger.error("Khong tim thay region — dung lai.");
+    logger.error("Khong tim thay region VND — dung lai de tranh gan gia ship sai thi truong.");
     return;
   }
 
