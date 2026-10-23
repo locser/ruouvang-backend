@@ -4,7 +4,8 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 /**
  * Giám sát lỗi thanh toán (canh_bao_loi_thanh_toan).
  * Medusa v2.17.2 KHÔNG phát event 'payment.failed', nên ta quét đơn 10 phút gần nhất:
- * đếm đơn bị hủy / thanh toán treo (canceled | requires_action). > 3 -> đẩy cảnh báo P0.
+ * đếm đơn bị huỷ trong cửa sổ (canceled_at) hoặc có payment collection canceled/failed. > 3 -> đẩy cảnh báo P0.
+ * (Order không có `payment_status` khi dùng query.graph ở 2.17 nên không dùng.)
  * Chống spam: bỏ qua nếu đã cảnh báo trong 10 phút.
  */
 export default async function paymentErrorMonitorJob(container: MedusaContainer) {
@@ -16,13 +17,17 @@ export default async function paymentErrorMonitorJob(container: MedusaContainer)
   try {
     const { data: orders } = await query.graph({
       entity: "order",
-      fields: ["id", "display_id", "status", "payment_status", "created_at"],
-      filters: { created_at: { $gte: since } } as any,
+      fields: ["id", "display_id", "status", "canceled_at", "updated_at", "payment_collections.status"],
+      filters: { updated_at: { $gte: since } } as any,
     });
-    const problems = (orders || []).filter(
-      (o: any) =>
-        o.status === "canceled" || ["canceled", "requires_action"].includes(o.payment_status)
-    );
+    const sinceMs = new Date(since).getTime();
+    const problems: { display_id: unknown; status: unknown; reason: "huy" | "thanh_toan_loi" }[] = [];
+    for (const o of (orders || []) as any[]) {
+      const huy = o.status === "canceled" && o.canceled_at && new Date(o.canceled_at).getTime() >= sinceMs;
+      const ttLoi = (o.payment_collections ?? []).some((pc: any) => ["canceled", "failed"].includes(pc?.status));
+      if (huy) problems.push({ display_id: o.display_id, status: o.status, reason: "huy" });
+      else if (ttLoi) problems.push({ display_id: o.display_id, status: o.status, reason: "thanh_toan_loi" });
+    }
     if (problems.length <= 3) return;
 
     const recent = await pg.raw(
@@ -38,11 +43,7 @@ export default async function paymentErrorMonitorJob(container: MedusaContainer)
         JSON.stringify({
           count: problems.length,
           window_minutes: 10,
-          sample: problems.slice(0, 10).map((o: any) => ({
-            display_id: o.display_id,
-            status: o.status,
-            payment_status: o.payment_status,
-          })),
+          sample: problems.slice(0, 10),
         }),
         "CHO",
       ]

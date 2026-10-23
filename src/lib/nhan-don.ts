@@ -5,7 +5,8 @@
  *
  *   kenh_dat_hang          "website" | "chatbot"
  *   phuong_thuc_thanh_toan "cod" | "chuyen-khoan"
- *   thanh_toan_trang_thai  "cod" | "cho_chuyen_khoan" | "da_thanh_toan"
+ *   thanh_toan_trang_thai  "cod" | "cho_chuyen_khoan" | "da_thanh_toan" | "can_hoan_thu_cong"
+ *     (can_hoan_thu_cong: đơn đã thu tiền rồi bị huỷ, nhân viên phải chuyển trả khách bằng tay)
  */
 export const NHAN_DON_CHATBOT = {
   phuong_thuc_thanh_toan: "chuyen-khoan",
@@ -28,6 +29,7 @@ export function nhanKenh(metadata: Metadata): "Website" | "Chatbot" {
 
 /** Dòng trạng thái thanh toán cho thông báo. */
 export function nhanThanhToan(metadata: Metadata): string {
+  if (metadata?.thanh_toan_trang_thai === "can_hoan_thu_cong") return "⚠️ Cần chuyển trả tiền cho khách"
   if (metadata?.thanh_toan_trang_thai === "da_thanh_toan") return "✅ Đã nhận tiền"
   if (metadata?.phuong_thuc_thanh_toan === "cod") return "💵 COD, thu tiền khi giao"
   return "🏦 Chuyển khoản, chờ xác nhận tiền"

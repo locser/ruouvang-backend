@@ -19,43 +19,52 @@ beforeEach(() => {
 
 describe("POST /ai/outbox/claim", () => {
   it("401 khi sai khoá", async () => {
-    expect((await call(claim, {}, {}, {})).code).toBe(401);
+    expect((await call(claim, { types: ["a"] }, {}, {})).code).toBe(401);
   });
 
-  it("SQL nguyên tử: SKIP LOCKED, DANG_GUI treo 10 phút, ORDER BY tao_luc, lọc loai; trả items theo tao_luc", async () => {
-    raw.mockResolvedValue({ rows: [{ id: "b", tao_luc: "2026-01-02" }, { id: "a", tao_luc: "2026-01-01" }] });
+  it("SQL nguyên tử: sweep LOI + claim với SKIP LOCKED, so_lan_thu<5, 2 ngày, claimed_at; items theo tao_luc", async () => {
+    raw
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ id: "b", tao_luc: "2026-01-02", claimed_at: "t" }, { id: "a", tao_luc: "2026-01-01", claimed_at: "t" }] });
     const r = await call(claim, { types: ["canh_bao_het_hang", "bao_cao_doanh_thu"], limit: 5 });
     expect(r.code).toBe(200);
     expect(r.body.items.map((i: any) => i.id)).toEqual(["a", "b"]);
-    const [sql, params] = raw.mock.calls[0];
+    const [sweep, sweepP] = raw.mock.calls[0];
+    expect(sweep).toContain("trang_thai = 'LOI'");
+    expect(sweep).toContain("so_lan_thu >= ?");
+    expect(sweepP).toEqual([5]);
+    const [sql, params] = raw.mock.calls[1];
     expect(sql).toContain("FOR UPDATE SKIP LOCKED");
-    expect(sql).toContain("SET trang_thai = 'DANG_GUI'");
+    expect(sql).toContain("SET so_lan_thu = so_lan_thu + (CASE WHEN trang_thai = 'DANG_GUI' THEN 1 ELSE 0 END)");
     expect(sql).toContain("interval '10 minutes'");
+    expect(sql).toContain("so_lan_thu < ?");
+    expect(sql).toContain("tao_luc > now() - interval '2 days'");
     expect(sql).toContain("ORDER BY tao_luc");
     expect(sql).toContain("loai IN (?, ?)");
-    expect(sql).toContain("RETURNING id, loai, tham_chieu, du_lieu, tao_luc, so_lan_thu");
-    expect(params).toEqual(["canh_bao_het_hang", "bao_cao_doanh_thu", 5]);
+    expect(sql).toContain("xu_ly_luc::text AS claimed_at");
+    expect(params).toEqual([5, "canh_bao_het_hang", "bao_cao_doanh_thu", 5]);
   });
 
-  it("không types: không lọc loai; limit mặc định 20, tối đa 50", async () => {
+  it("limit mặc định 20, tối đa 50", async () => {
     raw.mockResolvedValue({ rows: [] });
-    await call(claim, {});
-    expect(raw.mock.calls[0][0]).not.toContain("loai IN");
-    expect(raw.mock.calls[0][1]).toEqual([20]);
-    await call(claim, { limit: 999 });
-    expect(raw.mock.calls[1][1]).toEqual([50]);
+    await call(claim, { types: ["a"] });
+    expect(raw.mock.calls[1][1]).toEqual([5, "a", 20]);
+    await call(claim, { types: ["a"], limit: 999 });
+    expect(raw.mock.calls[3][1]).toEqual([5, "a", 50]);
   });
 
-  it("types rỗng: trả rỗng, không chạm DB; body sai: 400", async () => {
-    expect((await call(claim, { types: [] })).body).toEqual({ items: [] });
-    expect(raw).not.toHaveBeenCalled();
+  it("types bắt buộc: thiếu/sai kiểu -> 400; rỗng -> trả rỗng không chạm DB", async () => {
+    expect((await call(claim, {})).body.code).toBe("invalid_body");
     expect((await call(claim, { types: "x" })).body.code).toBe("invalid_body");
-    expect((await call(claim, { limit: 0 })).code).toBe(400);
+    expect((await call(claim, { types: [""] })).code).toBe(400);
+    expect((await call(claim, { types: [], limit: 0 })).body).toEqual({ items: [] });
+    expect((await call(claim, { types: ["a"], limit: 0 })).code).toBe(400);
+    expect(raw).not.toHaveBeenCalled();
   });
 
   it("DB lỗi: 500 internal_error", async () => {
     raw.mockRejectedValue(new Error("x"));
-    const r = await call(claim, {});
+    const r = await call(claim, { types: ["a"] });
     expect(r.code).toBe(500);
     expect(r.body.code).toBe("internal_error");
   });
@@ -80,6 +89,28 @@ describe("POST /ai/outbox/:id/ack", () => {
     expect(params).toEqual([ID]);
   });
 
+  it("claimed_at: thêm điều kiện khớp xu_ly_luc; không có thì như cũ", async () => {
+    raw.mockResolvedValue({ rows: [{ id: ID, trang_thai: "DA_GUI", so_lan_thu: 0 }] });
+    await call(ack, { ok: true, claimed_at: "2026-10-23 11:00:00.123456+00" }, { id: ID });
+    expect(raw.mock.calls[0][0]).toContain("xu_ly_luc = ?::timestamptz");
+    expect(raw.mock.calls[0][1]).toEqual([ID, "2026-10-23 11:00:00.123456+00"]);
+    await call(ack, { ok: false, error: "e", claimed_at: "T" }, { id: ID });
+    expect(raw.mock.calls[1][0]).toContain("xu_ly_luc = ?::timestamptz");
+    expect(raw.mock.calls[1][1]).toEqual([5, "e", ID, "T"]);
+    await call(ack, { ok: true }, { id: ID });
+    expect(raw.mock.calls[2][0]).not.toContain("timestamptz");
+  });
+
+  it("claimed_at lệch (dòng bị giành lại): 409 not_claimed; sai kiểu/định dạng: 400", async () => {
+    raw.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [{ trang_thai: "DANG_GUI" }] });
+    const r = await call(ack, { ok: true, claimed_at: "cu" }, { id: ID });
+    expect(r.code).toBe(409);
+    expect(r.body.code).toBe("not_claimed");
+    expect((await call(ack, { ok: true, claimed_at: 5 }, { id: ID })).code).toBe(400);
+    raw.mockRejectedValueOnce(Object.assign(new Error("bad"), { code: "22007" }));
+    expect((await call(ack, { ok: true, claimed_at: "zzz" }, { id: ID })).code).toBe(400);
+  });
+
   it("ok:false -> tăng so_lan_thu, CHO hoặc LOI theo ngưỡng 5, lưu _loi", async () => {
     raw.mockResolvedValue({ rows: [{ id: ID, trang_thai: "CHO", so_lan_thu: 1 }] });
     const r = await call(ack, { ok: false, error: "telegram 500" }, { id: ID });
@@ -87,6 +118,7 @@ describe("POST /ai/outbox/:id/ack", () => {
     const [sql, params] = raw.mock.calls[0];
     expect(sql).toContain("so_lan_thu = so_lan_thu + 1");
     expect(sql).toContain("CASE WHEN so_lan_thu + 1 >= ? THEN 'LOI' ELSE 'CHO' END");
+    expect(sql).toContain("jsonb_typeof(du_lieu) = 'object'");
     expect(sql).toContain("jsonb_set(du_lieu, '{_loi}'");
     expect(params).toEqual([OUTBOX_MAX_ATTEMPTS, "telegram 500", ID]);
     expect(OUTBOX_MAX_ATTEMPTS).toBe(5);

@@ -22,5 +22,6 @@ describe("nhanThanhToan", () => {
     expect(nhanThanhToan({ phuong_thuc_thanh_toan: "cod" })).toMatch(/COD/)
     expect(nhanThanhToan({ phuong_thuc_thanh_toan: "chuyen-khoan", thanh_toan_trang_thai: "da_thanh_toan" })).toMatch(/Đã nhận tiền/)
     expect(nhanThanhToan(undefined)).toMatch(/chờ xác nhận tiền/)
+    expect(nhanThanhToan({ phuong_thuc_thanh_toan: "chuyen-khoan", thanh_toan_trang_thai: "can_hoan_thu_cong" })).toBe("⚠️ Cần chuyển trả tiền cho khách")
   })
 })
