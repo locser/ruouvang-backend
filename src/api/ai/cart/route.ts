@@ -219,7 +219,24 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         }
       });
 
-      return res.status(200).json({ ok: true, cart_id: cartId, cart });
+      // Gắn ship ngay khi có địa chỉ để bot báo đủ "tiền hàng + phí ship = tổng" trước khi khách xác nhận.
+      // Lỗi ở đây không chặn việc lưu địa chỉ; bước chốt đơn sẽ gắn lại.
+      let totals: { item_total: number | null; shipping_total: number | null; total: number | null } | null = null;
+      try {
+        await attachStandardShipping(req, cartId);
+        const queryTong = req.scope.resolve(ContainerRegistrationKeys.QUERY);
+        const { data: gioTong } = await queryTong.graph({
+          entity: "cart",
+          fields: ["id", "item_total", "shipping_total", "total"],
+          filters: { id: cartId },
+        });
+        const g: any = gioTong?.[0];
+        if (g) totals = { item_total: Number(g.item_total ?? 0), shipping_total: Number(g.shipping_total ?? 0), total: Number(g.total ?? 0) };
+      } catch (e: any) {
+        logger.warn(`[update_address] Chưa tính được phí ship tạm cho giỏ ${cartId}: ${e.message}`);
+      }
+
+      return res.status(200).json({ ok: true, cart_id: cartId, cart, totals });
     }
 
     // 4. CHECKOUT
@@ -240,34 +257,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       //
       // Thông báo lỗi không hề nhắc tới ID nên rất dễ đi tìm nhầm sang cấu hình
       // vùng giao hàng — vốn hoàn toàn đúng.
-      try {
-        const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
-        const { data: dsOption } = await query.graph({
-          entity: "shipping_option",
-          fields: ["id", "name", "price_type"],
-          filters: { deleted_at: null } as any,
-        });
-
-        if (!dsOption?.length) {
-          throw new Error(
-            "Shop chưa cấu hình phương thức vận chuyển nào. " +
-            "Chạy: npx medusa exec ./src/scripts/setup-vanchuyen.ts"
-          );
-        }
-
-        // Ưu tiên gói tiêu chuẩn; không thấy thì lấy cái đầu tiên.
-        const chon =
-          dsOption.find((o: any) => /tieu chuan|tiêu chuẩn|standard/i.test(o.name ?? "")) ??
-          dsOption[0];
-
-        console.log(`[CheckoutStep] Chọn phương thức vận chuyển: ${chon.name} (${chon.id})`);
-        await addShippingMethodToCartWorkflow(req.scope).run({
-          input: { cart_id: cartId, options: [{ id: chon.id }] },
-        });
-      } catch (e: any) {
-        console.error("[CheckoutStep] Error in addShippingMethodToCartWorkflow:", e);
-        throw new Error(`Shipping method error: ${e.message}`);
-      }
+      await attachStandardShipping(req, cartId);
 
       // b. Create payment collection for cart first if it doesn't exist
       let paymentCollectionId: string | undefined;
@@ -360,7 +350,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       
       const { data: orders } = await query.graph({
         entity: "order",
-        fields: ["id", "display_id", "total", "subtotal", "shipping_total", "tax_total"],
+        fields: ["id", "display_id", "total", "subtotal", "item_total", "shipping_total", "tax_total"],
         filters: { id: orderId }
       });
 
@@ -371,5 +361,41 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   } catch (err: any) {
     logger.error(`Error processing cart action ${action}: ${err.message}`);
     return res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * Gắn gói vận chuyển tiêu chuẩn vào giỏ (tự tra, không ghi cứng ID — xem ghi chú bên trong).
+ * Dùng ở bước nhận địa chỉ (để khách thấy phí ship trước khi xác nhận) và ở bước chốt đơn.
+ * Medusa thay phương thức cũ khi thêm lại nên gọi hai lần không cộng phí hai lần.
+ */
+async function attachStandardShipping(req: MedusaRequest, cartId: string): Promise<void> {
+  try {
+    const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
+    const { data: dsOption } = await query.graph({
+      entity: "shipping_option",
+      fields: ["id", "name", "price_type"],
+      filters: { deleted_at: null } as any,
+    });
+
+    if (!dsOption?.length) {
+      throw new Error(
+        "Shop chưa cấu hình phương thức vận chuyển nào. " +
+        "Chạy: npx medusa exec ./src/scripts/setup-vanchuyen.ts"
+      );
+    }
+
+    // Ưu tiên gói tiêu chuẩn; không thấy thì lấy cái đầu tiên.
+    const chon =
+      dsOption.find((o: any) => /tieu chuan|tiêu chuẩn|standard/i.test(o.name ?? "")) ??
+      dsOption[0];
+
+    console.log(`[CheckoutStep] Chọn phương thức vận chuyển: ${chon.name} (${chon.id})`);
+    await addShippingMethodToCartWorkflow(req.scope).run({
+      input: { cart_id: cartId, options: [{ id: chon.id }] },
+    });
+  } catch (e: any) {
+    console.error("[CheckoutStep] Error in addShippingMethodToCartWorkflow:", e);
+    throw new Error(`Shipping method error: ${e.message}`);
   }
 }
