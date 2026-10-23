@@ -5,6 +5,23 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
  * Quét tồn kho định kỳ; SKU khả dụng <= ngưỡng (low_stock_threshold) -> đẩy cảnh báo vào ai_outbox.
  * Daemon sẽ gửi cảnh báo Telegram. Chống spam: bỏ qua nếu đã cảnh báo trong 12 giờ gần đây.
  */
+/**
+ * Thêm `title` = "Sản phẩm - Biến thể"; bỏ biến thể khi nó bắt đầu bằng tên sản phẩm hoặc là/kết thúc bằng
+ * "Default Title"/"Default". Ép các số lượng (SUM trả chuỗi) về Number; giữ nguyên các trường cũ.
+ */
+export function tenHienThi(r: any) {
+  const { product_title, variant_title, ...rest } = r;
+  const v = typeof variant_title === "string" ? variant_title.trim() : "";
+  const p = typeof product_title === "string" ? product_title.trim() : "";
+  const macDinh = /(^|\s)default( title)?$/i.test(v);
+  const bo = !v || macDinh || (p && v.toLowerCase().startsWith(p.toLowerCase()));
+  const parts = [p, bo ? "" : v].filter(Boolean);
+  for (const k of ["stocked_quantity", "reserved_quantity", "available"]) {
+    if (k in rest) (rest as any)[k] = Number((rest as any)[k]);
+  }
+  return { ...rest, title: parts.length ? parts.join(" - ") : (r.sku ?? null) };
+}
+
 export default async function stockAlertJob(container: MedusaContainer) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
   const pg = container.resolve("__pg_connection__");
@@ -19,19 +36,34 @@ export default async function stockAlertJob(container: MedusaContainer) {
 
   let rows: any[] = [];
   try {
+    // Gộp inventory_level theo item TRONG SUBQUERY trước, rồi mới join variant/product
+    // (join trước rồi SUM sẽ nhân đôi khi một item gắn nhiều variant).
     const low = await pg.raw(
       `SELECT ii.sku,
-              il.stocked_quantity,
-              COALESCE(il.reserved_quantity, 0) AS reserved_quantity,
-              (il.stocked_quantity - COALESCE(il.reserved_quantity, 0)) AS available
-       FROM inventory_item ii
-       JOIN inventory_level il ON ii.id = il.inventory_item_id
-       WHERE (il.stocked_quantity - COALESCE(il.reserved_quantity, 0)) <= ?
-       ORDER BY available ASC
+              p.title AS product_title,
+              pv.title AS variant_title,
+              lv.stocked_quantity,
+              lv.reserved_quantity,
+              lv.available
+       FROM (
+         SELECT il.inventory_item_id,
+                SUM(il.stocked_quantity) AS stocked_quantity,
+                SUM(COALESCE(il.reserved_quantity, 0)) AS reserved_quantity,
+                SUM(il.stocked_quantity - COALESCE(il.reserved_quantity, 0)) AS available
+         FROM inventory_level il
+         WHERE il.deleted_at IS NULL
+         GROUP BY il.inventory_item_id
+         HAVING SUM(il.stocked_quantity - COALESCE(il.reserved_quantity, 0)) <= ?
+       ) lv
+       JOIN inventory_item ii ON ii.id = lv.inventory_item_id AND ii.deleted_at IS NULL
+       LEFT JOIN product_variant_inventory_item pvii ON pvii.inventory_item_id = ii.id AND pvii.deleted_at IS NULL
+       LEFT JOIN product_variant pv ON pv.id = pvii.variant_id AND pv.deleted_at IS NULL
+       LEFT JOIN product p ON p.id = pv.product_id AND p.deleted_at IS NULL
+       ORDER BY lv.available ASC
        LIMIT 50`,
       [threshold]
     );
-    rows = low.rows || [];
+    rows = (low.rows || []).map(tenHienThi);
   } catch (e: any) {
     logger.warn(`[stock-alert] Không quét được tồn kho: ${e.message}`);
     return;

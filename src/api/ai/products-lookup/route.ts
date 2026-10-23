@@ -13,7 +13,9 @@ import { checkAuth } from "../../../lib/ai-auth";
  *    Nhờ vậy dù index tìm kiếm có lệch, khách vẫn không bao giờ thấy giá sai.
  *
  * POST /ai/products-lookup
- * Body: { ids?: string[], skus?: string[] }   (tối đa 100 mỗi loại)
+ * Body: { ids?: string[], skus?: string[], status?: "draft"|"published"|"all" }   (ids/skus tối đa 100 mỗi loại)
+ *   status mặc định "published" (như cũ); "draft"/"all" để bot tìm được sản phẩm đang ẩn.
+ *   Sai giá trị => 400 { code: "invalid_status" }.
  */
 
 const pgPool = new Pool({ connectionString: process.env.CONFIG_POSTGRES_URL_MEDUSA });
@@ -23,7 +25,11 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     return res.status(401).json({ error: "Unauthorized: Invalid x-ai-secret-key header" });
   }
 
-  const body = (req.body ?? {}) as { ids?: unknown; skus?: unknown };
+  const body = (req.body ?? {}) as { ids?: unknown; skus?: unknown; status?: unknown };
+  const status = body.status === undefined || body.status === null || body.status === "" ? "published" : body.status;
+  if (status !== "published" && status !== "draft" && status !== "all") {
+    return res.status(400).json({ error: "status chỉ nhận published, draft hoặc all", code: "invalid_status" });
+  }
   const ids = Array.isArray(body.ids) ? body.ids.filter((x): x is string => typeof x === "string").slice(0, 100) : [];
   const skus = Array.isArray(body.skus) ? body.skus.filter((x): x is string => typeof x === "string").slice(0, 100) : [];
 
@@ -48,20 +54,23 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       FROM product p
       JOIN product_variant pv ON pv.product_id = p.id AND pv.deleted_at IS NULL
       LEFT JOIN product_variant_price_set pvps ON pvps.variant_id = pv.id
+      -- Chỉ giá VND GỐC (không price list, không rule) để mỗi variant ra đúng một dòng.
       LEFT JOIN price pr ON pr.price_set_id = pvps.price_set_id
             AND lower(pr.currency_code) = 'vnd'
             AND pr.deleted_at IS NULL
+            AND pr.price_list_id IS NULL
+            AND pr.rules_count = 0
       LEFT JOIN product_variant_inventory_item pvii ON pvii.variant_id = pv.id
       LEFT JOIN inventory_level il ON il.inventory_item_id = pvii.inventory_item_id
       WHERE p.deleted_at IS NULL
-        AND p.status = 'published'
+        AND ($3::text = 'all' OR p.status = $3::text)
         AND (
           ($1::text[] IS NOT NULL AND cardinality($1::text[]) > 0 AND p.id = ANY($1::text[]))
           OR
           ($2::text[] IS NOT NULL AND cardinality($2::text[]) > 0 AND pv.sku = ANY($2::text[]))
         )
       `,
-      [ids, skus]
+      [ids, skus, status]
     );
 
     const items = (dbRes.rows || []).map((r: any) => ({
