@@ -106,6 +106,33 @@ describe("hoanThanhDon - capture trong khoá", () => {
   });
 });
 
+describe("hoanThanhDon - khoá và cảnh báo", () => {
+  it("lỗi provider khoá: thông báo không nói 'nơi khác'", async () => {
+    lockExecute.mockRejectedValue(new Error("redis down"));
+    const r = await hoanThanhDon(req, "order_ABCDEFGH12");
+    expect(r.status).toBe(500);
+    expect(String((r.body as any).error)).not.toContain("nơi khác");
+    expect(String((r.body as any).error)).toContain("sự cố");
+  });
+  it("timeout khoá: thông báo đang xác nhận ở nơi khác", async () => {
+    lockExecute.mockRejectedValue(new Error("Timed-out acquiring lock."));
+    const r = await hoanThanhDon(req, "order_ABCDEFGH12");
+    expect(String((r.body as any).error)).toContain("nơi khác");
+  });
+  it("mọi payment đã huỷ: cảnh báo không có khoản thanh toán còn hiệu lực", async () => {
+    paymentsFresh = [{ id: "p1", amount: 100, canceled_at: "2026-10-01" }];
+    const r = await hoanThanhDon(req, "order_ABCDEFGH12");
+    expect(r.status).toBe(200);
+    expect(calls).not.toContain("capture");
+    expect((r.body as any).ket_qua.canh_bao).toContain("Đơn không có khoản thanh toán còn hiệu lực để thu");
+    expect((r.body as any).ket_qua.captured_payment).toBe(false);
+  });
+  it("ghi XONG/LOI kèm xong_luc = now()", async () => {
+    await hoanThanhDon(req, "order_ABCDEFGH12");
+    expect(sqlOf().some((q) => q.startsWith("UPDATE") && q.includes("xong_luc = now()"))).toBe(true);
+  });
+});
+
 describe("hoanThanhDon - metadata", () => {
   it("ghi lại metadata mới đọc trong khoá, giữ trường route khác ghi, thêm tracking_code + da_thanh_toan", async () => {
     const r = await hoanThanhDon(req, "order_ABCDEFGH12", " MVD1 ");

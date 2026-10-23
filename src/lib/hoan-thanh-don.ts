@@ -152,13 +152,20 @@ export async function hoanThanhDon(
       for (const f of cap.failed) {
         buoc.canh_bao.push(`Không capture được payment ${f.id}: ${f.message}`);
       }
+      if (cap.total === 0) {
+        buoc.canh_bao.push("Đơn không có khoản thanh toán còn hiệu lực để thu");
+      }
       if (cap.total > 0 && cap.allCaptured) {
         buoc.captured_payment = true;
         if (cap.captured.length === 0) buoc.canh_bao.push("Payment đã được thu từ trước.");
       }
     });
     if (khoaCapture.lockFailed) {
-      throw new Error("Đơn đang được xác nhận tiền ở nơi khác, vui lòng thử lại sau vài giây.");
+      throw new Error(
+        khoaCapture.reason === "timeout"
+          ? "Đơn đang được xác nhận tiền ở nơi khác, vui lòng thử lại sau vài giây."
+          : "Hệ thống khoá đơn đang gặp sự cố, vui lòng thử lại sau."
+      );
     }
 
     // ---- 2. Xuất kho (tạo fulfillment) cho phần còn chưa xuất ----
@@ -227,7 +234,7 @@ export async function hoanThanhDon(
     };
 
     await pg.raw(
-      "UPDATE ai_action_log SET trang_thai = ?, ket_qua = ? WHERE idempotency_key = ?",
+      "UPDATE ai_action_log SET trang_thai = ?, ket_qua = ?, xong_luc = now() WHERE idempotency_key = ?",
       ["XONG", JSON.stringify(ketQua), idempotencyKey]
     );
 
@@ -243,7 +250,7 @@ export async function hoanThanhDon(
   } catch (err: any) {
     const thongDiep = err?.message ?? String(err);
     await pg
-      .raw("UPDATE ai_action_log SET trang_thai = ?, ket_qua = ? WHERE idempotency_key = ?", [
+      .raw("UPDATE ai_action_log SET trang_thai = ?, ket_qua = ?, xong_luc = now() WHERE idempotency_key = ?", [
         "LOI",
         JSON.stringify({ loi: thongDiep, buoc_da_xong: buoc }),
         idempotencyKey,

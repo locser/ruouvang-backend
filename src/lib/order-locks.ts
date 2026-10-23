@@ -22,7 +22,9 @@ export const orderPaymentLockKey = (orderId: string) => `order-payment:${orderId
  * Chạy `fn` trong khoá theo đơn (Modules.LOCKING). Khoá chỉ bảo vệ việc
  * capture + ghi metadata, không bao cả quá trình xuất kho.
  *
- * `lockFailed = true` nghĩa là KHÔNG vào được khoá (hết thời gian chờ) và `fn` chưa chạy.
+ * `lockFailed = true` nghĩa là KHÔNG vào được khoá và `fn` chưa chạy. `reason`:
+ *   "timeout" = hết thời gian chờ vì nơi khác đang giữ khoá (Medusa ném "Timed-out acquiring lock.");
+ *   "error"   = lỗi provider/hạ tầng locking (đã ghi log lỗi gốc), KHÔNG phải do trùng thao tác.
  * Fallback: nếu không resolve được module locking (môi trường test/unit không đăng ký),
  * chạy `fn` thẳng không khoá; khi đó chỉ còn lớp ai_action_log chống trùng.
  */
@@ -31,7 +33,7 @@ export async function withOrderPaymentLock<T>(
   orderId: string,
   fn: () => Promise<T>,
   timeoutSeconds = 30
-): Promise<{ lockFailed: false; value: T } | { lockFailed: true }> {
+): Promise<{ lockFailed: false; value: T } | { lockFailed: true; reason: "timeout" | "error"; error: string }> {
   let locking: any = null;
   try {
     locking = scope.resolve(Modules.LOCKING);
@@ -53,8 +55,17 @@ export async function withOrderPaymentLock<T>(
     );
     return { lockFailed: false, value };
   } catch (e) {
-    if (!started) return { lockFailed: true };
-    throw e;
+    if (started) throw e;
+    const error = (e as any)?.message ?? String(e);
+    const reason = /timed.?out/i.test(error) ? "timeout" : "error";
+    try {
+      scope.resolve(ContainerRegistrationKeys.LOGGER).error(
+        `[order-locks] Không vào được khoá ${orderPaymentLockKey(orderId)} (${reason}): ${error}`
+      );
+    } catch {
+      /* không có logger thì bỏ qua */
+    }
+    return { lockFailed: true, reason, error };
   }
 }
 

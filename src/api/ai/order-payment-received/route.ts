@@ -18,7 +18,7 @@ import {
  * POST /ai/order-payment-received   Body: { order_id: string }
  *
  * Mã `code` (máy đọc): unauthorized, missing_order_id, order_not_found,
- * order_canceled, order_status_invalid, order_is_cod, order_payment_state_invalid, in_progress, capture_failed, metadata_update_failed, internal_error.
+ * order_canceled, order_status_invalid, order_is_cod, order_payment_state_invalid, lock_error, in_progress, capture_failed, metadata_update_failed, internal_error.
  *
  * Chống bấm trùng: khoá theo đơn (Modules.LOCKING, dùng chung với hoan-thanh-don) +
  * upsert nguyên tử trên ai_action_log. Chỉ nhận đơn chuyển khoản (thanh_toan_trang_thai
@@ -169,7 +169,14 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
   try {
     const r = await withOrderPaymentLock(req.scope, order_id, job);
-    const out = r.lockFailed ? inProgress : r.value;
+    const out: Out = !r.lockFailed
+      ? r.value
+      : r.reason === "timeout"
+        ? inProgress
+        : {
+            status: 500,
+            body: { error: "Hệ thống khoá đơn đang gặp sự cố, vui lòng thử lại sau.", code: "lock_error" },
+          };
     return res.status(out.status).json(out.body);
   } catch (err: any) {
     const msg = err?.message ?? String(err);

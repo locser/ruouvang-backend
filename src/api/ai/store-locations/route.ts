@@ -5,9 +5,16 @@ import { checkAuth } from "../../../lib/ai-auth";
 /**
  * GET /ai/store-locations — danh sách chi nhánh cho chatbot.
  *
- * Nguồn: module Stock Location của Medusa (admin cấu hình ở
- * Settings > Locations & Shipping). Các khoá đọc từ metadata:
- *   opening_hours, maps_url (http/https), hidden (true|"true" => ẩn), sort_order (số).
+ * Nguồn: module Stock Location của Medusa. stock_location ở đây chủ yếu là KHO,
+ * nên OPT-IN: chỉ trả location có metadata.show_to_customer = true (nhận cả "true")
+ * và có address_1. Location không có metadata này không bao giờ lộ cho khách.
+ *
+ * Hướng dẫn admin: vào Settings > Locations, mở location, thêm metadata:
+ *   show_to_customer = true        (bắt buộc để hiện cho khách)
+ *   opening_hours    = "8h-22h"    (tuỳ chọn)
+ *   maps_url         = https://... (tuỳ chọn, chỉ nhận http/https)
+ *   sort_order       = 1           (tuỳ chọn, số nhỏ lên trước)
+ * và điền địa chỉ (address_1 bắt buộc).
  */
 
 function toNumberOrNull(v: unknown): number | null {
@@ -48,8 +55,9 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     });
 
     const rows = ((data ?? []) as any[]).filter((l) => {
-      const h = l?.metadata?.hidden;
-      return !(h === true || h === "true");
+      const v = l?.metadata?.show_to_customer;
+      if (!(v === true || v === "true")) return false;
+      return cleanText(l?.address?.address_1) !== null;
     });
 
     const withSort = rows.map((l) => ({ l, sort: toNumberOrNull(l?.metadata?.sort_order) }));

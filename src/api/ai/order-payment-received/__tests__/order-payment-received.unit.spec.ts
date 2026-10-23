@@ -147,10 +147,18 @@ describe("POST /ai/order-payment-received", () => {
   });
 
   it("không vào được khoá: 409 in_progress, không đọc đơn", async () => {
-    lockExecute.mockRejectedValue(new Error("timed out"));
+    lockExecute.mockRejectedValue(new Error("Timed-out acquiring lock."));
     const r = await run();
     expect(r.code).toBe(409);
     expect(r.body.code).toBe("in_progress");
+    expect(graph).not.toHaveBeenCalled();
+  });
+
+  it("lỗi provider khoá: 500 lock_error, không nói đang xử lý", async () => {
+    lockExecute.mockRejectedValue(new Error("redis down"));
+    const r = await run();
+    expect(r.code).toBe(500);
+    expect(r.body.code).toBe("lock_error");
     expect(graph).not.toHaveBeenCalled();
   });
 
