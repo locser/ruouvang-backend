@@ -3,10 +3,10 @@ import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
 import {
   completeOrderWorkflow,
   createOrderFulfillmentWorkflow,
-  capturePaymentWorkflow,
 } from "@medusajs/medusa/core-flows";
 import * as crypto from "crypto";
 import { ghiNhatKy } from "./nhat-ky";
+import { capturePayments, claimActionLog, readOrderPayments, withOrderPaymentLock } from "./order-locks";
 
 /**
  * Duyệt Giao & Hoàn Thành đơn hàng (1-Tap Settlement) — logic dùng chung.
@@ -73,38 +73,32 @@ export async function hoanThanhDon(
 
   const idempotencyKey = sha256(`order_complete|${order_id}`);
 
-  // ---- Chống bấm trùng ----
+  // ---- Chống bấm trùng (upsert nguyên tử; XONG thì trả kết quả cũ) ----
   try {
-    const cu = await pg.raw(
-      "SELECT trang_thai, ket_qua FROM ai_action_log WHERE idempotency_key = ?",
-      [idempotencyKey]
+    const c = await claimActionLog(
+      pg,
+      idempotencyKey,
+      "order_complete",
+      { order_id, tracking_code },
+      { rerunDone: false }
     );
-    if (cu.rows.length > 0) {
-      const log = cu.rows[0];
-      if (log.trang_thai === "XONG") {
+    if (!c.acquired) {
+      if (c.trang_thai === "XONG") {
         return {
           status: 200,
           body: {
             ok: true,
             da_xu_ly_truoc_do: true,
-            ket_qua: log.ket_qua,
+            ket_qua: c.ket_qua,
             ghi_chu: "Đơn này đã được duyệt hoàn thành trước đó.",
           },
         };
       }
-      if (log.trang_thai === "DANG_CHAY") {
-        return {
-          status: 409,
-          body: { error: "Đơn này đang được xử lý, vui lòng đợi vài giây rồi thử lại." },
-        };
-      }
-      await pg.raw("DELETE FROM ai_action_log WHERE idempotency_key = ?", [idempotencyKey]);
+      return {
+        status: 409,
+        body: { error: "Đơn này đang được xử lý, vui lòng đợi vài giây rồi thử lại." },
+      };
     }
-
-    await pg.raw(
-      "INSERT INTO ai_action_log (idempotency_key, hanh_dong, tham_so, trang_thai) VALUES (?, ?, ?, ?)",
-      [idempotencyKey, "order_complete", JSON.stringify({ order_id, tracking_code }), "DANG_CHAY"]
-    );
   } catch (e: any) {
     logger.error(`[order-complete] Không ghi được nhật ký idempotency: ${e?.message ?? e}`);
     return { status: 500, body: { error: "Không khởi tạo được phiên duyệt đơn" } };
@@ -146,26 +140,25 @@ export async function hoanThanhDon(
     }
 
     // ---- 1. Thu tiền (capture payment) ----
-    const payments: any[] = (order.payment_collections ?? [])
-      .flatMap((pc: any) => pc.payments ?? [])
-      .filter(Boolean);
-
-    if (payments.length === 0) {
-      buoc.canh_bao.push("Đơn chưa có payment nào để thu — bỏ qua bước capture.");
-    } else {
-      for (const p of payments) {
-        if (p.captured_at) continue;
-        try {
-          await capturePaymentWorkflow(req.scope).run({ input: { payment_id: p.id } });
-          buoc.captured_payment = true;
-        } catch (e: any) {
-          buoc.canh_bao.push(`Không capture được payment ${p.id}: ${e?.message ?? e}`);
-        }
+    // Khoá chung theo đơn với /ai/order-payment-received; đọc lại payment trong khoá.
+    const khoaCapture = await withOrderPaymentLock(req.scope, order_id, async () => {
+      const payments = await readOrderPayments(req.scope, order_id);
+      if (payments.length === 0) {
+        buoc.canh_bao.push("Đơn chưa có payment nào để thu — bỏ qua bước capture.");
+        return;
       }
-      if (payments.every((p) => p.captured_at)) {
+      const cap = await capturePayments(req.scope, payments);
+      if (cap.captured.length > 0) buoc.captured_payment = true;
+      for (const f of cap.failed) {
+        buoc.canh_bao.push(`Không capture được payment ${f.id}: ${f.message}`);
+      }
+      if (cap.total > 0 && cap.allCaptured) {
         buoc.captured_payment = true;
-        buoc.canh_bao.push("Payment đã được thu từ trước.");
+        if (cap.captured.length === 0) buoc.canh_bao.push("Payment đã được thu từ trước.");
       }
+    });
+    if (khoaCapture.lockFailed) {
+      throw new Error("Đơn đang được xác nhận tiền ở nơi khác, vui lòng thử lại sau vài giây.");
     }
 
     // ---- 2. Xuất kho (tạo fulfillment) cho phần còn chưa xuất ----
@@ -200,17 +193,28 @@ export async function hoanThanhDon(
 
     try {
       const orderModule: any = req.scope.resolve(Modules.ORDER);
-      await orderModule.updateOrders([
-        {
-          id: order_id,
-          metadata: {
-            ...(order.metadata ?? {}),
-            tracking_code: maVanDon,
-            // Tiền đã thu (capture) ⇒ đổi nhãn "chờ chuyển khoản" thành "đã thanh toán".
-            ...(buoc.captured_payment ? { thanh_toan_trang_thai: "da_thanh_toan" } : {}),
+      // Ghi trong khoá và đọc lại metadata mới nhất để không đè mất cập nhật của route xác nhận tiền.
+      await withOrderPaymentLock(req.scope, order_id, async () => {
+        const { data: moi } = await query.graph({
+          entity: "order",
+          fields: ["id", "metadata"],
+          filters: { id: order_id },
+        });
+        const metadataMoi = ((moi?.[0] as any)?.metadata ?? order.metadata ?? {}) as Record<string, unknown>;
+        await orderModule.updateOrders([
+          {
+            id: order_id,
+            metadata: {
+              ...metadataMoi,
+              tracking_code: maVanDon,
+              // Tiền đã thu (capture) ⇒ đổi nhãn "chờ chuyển khoản" thành "đã thanh toán".
+              ...(buoc.captured_payment ? { thanh_toan_trang_thai: "da_thanh_toan" } : {}),
+            },
           },
-        },
-      ]);
+        ]);
+      }).then((r) => {
+        if (r.lockFailed) buoc.canh_bao.push("Không lưu được mã vận đơn vào metadata: không giành được khoá đơn.");
+      });
     } catch (e: any) {
       buoc.canh_bao.push(`Không lưu được mã vận đơn vào metadata: ${e?.message ?? e}`);
     }
