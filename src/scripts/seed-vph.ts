@@ -187,14 +187,19 @@ export default async function seedVPH({ container }: ExecArgs) {
   // -------------------------------------------------------- API key
   logger.info("→ Khoá API công khai (publishable key)…")
   const { data: keys } = await query.graph({
-    entity: "api_key", fields: ["id", "token"], filters: { type: "publishable" },
+    entity: "api_key", fields: ["id", "title", "token"], filters: { type: "publishable" },
   })
-  let apiKey = keys?.[0]
+  // Không tái dùng key đầu tiên: một publishable key gắn nhiều sales channel sẽ
+  // khiến Store API không thể tự xác định kênh khi tính tồn kho/tạo cart.
+  let apiKey = keys?.find((key: any) => key.title === "Storefront VN")
   if (!apiKey) {
     const { result } = await createApiKeysWorkflow(container).run({
       input: { api_keys: [{ title: "Storefront VN", type: "publishable", created_by: "" }] },
     })
     apiKey = result[0] as any
+  }
+  if (!apiKey) {
+    throw new Error("Không tạo được publishable key riêng cho Storefront VN")
   }
   await linkSalesChannelsToApiKeyWorkflow(container).run({
     input: { id: apiKey.id, add: [channel.id] },
