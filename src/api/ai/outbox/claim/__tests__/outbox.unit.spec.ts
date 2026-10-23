@@ -32,7 +32,9 @@ describe("POST /ai/outbox/claim", () => {
     const [sweep, sweepP] = raw.mock.calls[0];
     expect(sweep).toContain("trang_thai = 'LOI'");
     expect(sweep).toContain("so_lan_thu >= ?");
-    expect(sweepP).toEqual([5]);
+    expect(sweep).toContain("tao_luc <= now() - interval '2 days'");
+    expect(sweep).toContain("loai IN (?, ?)");
+    expect(sweepP).toEqual([5, "canh_bao_het_hang", "bao_cao_doanh_thu"]);
     const [sql, params] = raw.mock.calls[1];
     expect(sql).toContain("FOR UPDATE SKIP LOCKED");
     expect(sql).toContain("SET so_lan_thu = so_lan_thu + (CASE WHEN trang_thai = 'DANG_GUI' THEN 1 ELSE 0 END)");

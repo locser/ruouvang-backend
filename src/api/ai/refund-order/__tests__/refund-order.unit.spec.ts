@@ -74,11 +74,46 @@ describe("POST /ai/refund-order - huỷ cả đơn", () => {
     expect(r.body.code).toBe("order_not_found");
   });
 
-  it("đã canceled: 200 already, không huỷ lại", async () => {
+  it("đã canceled, chưa thu tiền: 200 already, không huỷ lại, không gắn nhãn", async () => {
     graph.mockResolvedValue({ data: [order({ status: "canceled" })] });
     const r = await run();
-    expect(r.body).toEqual({ ok: true, mode: "cancel", already: true, display_id: 9 });
+    expect(r.body).toEqual({
+      ok: true, mode: "cancel", already: true, display_id: 9, paid_amount: 0, captured_amount: 0,
+      refunded_before: 0, needs_manual_refund: false, canh_bao: [],
+    });
     expect(mockCancel).not.toHaveBeenCalled();
+    expect(updateOrders).not.toHaveBeenCalled();
+  });
+
+  it("đã canceled (admin huỷ) mà đã thu và thiếu nhãn: bù can_hoan_thu_cong trong khoá", async () => {
+    graph.mockResolvedValue({ data: [order({
+      status: "canceled", metadata: { thanh_toan_trang_thai: "da_thanh_toan", kenh: "x" },
+      payment_collections: [{ id: "pc", payments: [{ id: "p1", amount: 500, captured_at: "t", captures: [{ amount: 500 }], refunds: [{ amount: 500 }] }] }],
+    })] });
+    const r = await run();
+    expect(r.body).toMatchObject({ already: true, captured_amount: 500, refunded_before: 500, paid_amount: 0, needs_manual_refund: true });
+    expect(updateOrders.mock.calls[0][0][0].metadata).toEqual({ thanh_toan_trang_thai: "can_hoan_thu_cong", kenh: "x" });
+    expect(lockExecute).toHaveBeenCalled();
+    expect(mockCancel).not.toHaveBeenCalled();
+  });
+
+  it("đã canceled và đã có nhãn can_hoan_thu_cong: không ghi lại", async () => {
+    graph.mockResolvedValue({ data: [order({
+      status: "canceled", metadata: { thanh_toan_trang_thai: "can_hoan_thu_cong" },
+      payment_collections: [{ id: "pc", payments: [{ id: "p1", amount: 5, captured_at: "t", captures: [{ amount: 5 }] }] }],
+    })] });
+    const r = await run();
+    expect(r.body.needs_manual_refund).toBe(true);
+    expect(updateOrders).not.toHaveBeenCalled();
+  });
+
+  it("paid_amount trừ refund đã ghi trước, trả captured_amount/refunded_before", async () => {
+    graph.mockResolvedValue({ data: [order({
+      payment_collections: [{ id: "pc", payments: [{ id: "p1", amount: 500, captured_at: "t", captures: [{ amount: 500 }], refunds: [{ amount: 120 }] }] }],
+    })] });
+    const r = await run();
+    expect(r.body).toMatchObject({ captured_amount: 500, refunded_before: 120, paid_amount: 380, needs_manual_refund: true });
+    expect(graph.mock.calls[0][0].fields).toContain("payment_collections.payments.refunds.amount");
   });
 
   it("completed: 409 order_completed", async () => {
@@ -108,7 +143,7 @@ describe("POST /ai/refund-order - huỷ cả đơn", () => {
   it("đơn chưa thu tiền: huỷ, paid_amount 0, không đổi metadata", async () => {
     const r = await run();
     expect(r.code).toBe(200);
-    expect(r.body).toEqual({ ok: true, mode: "cancel", already: false, display_id: 9, paid_amount: 0, needs_manual_refund: false, canh_bao: [] });
+    expect(r.body).toEqual({ ok: true, mode: "cancel", already: false, display_id: 9, paid_amount: 0, captured_amount: 0, refunded_before: 0, needs_manual_refund: false, canh_bao: [] });
     expect(mockCancel).toHaveBeenCalledWith({ input: { order_id: "o1" } });
     expect(updateOrders).not.toHaveBeenCalled();
   });

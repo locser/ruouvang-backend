@@ -15,7 +15,8 @@ import { PAYMENT_FIELDS, claimActionLog, withOrderPaymentLock } from "../../../l
  *   Chạy trong khoá theo đơn (chung với xác nhận tiền / duyệt hoàn thành) + claimActionLog
  *   `order_cancel|<id>`; đọc lại đơn trong khoá.
  *   Thành công: { ok, mode:"cancel", already:false, display_id, paid_amount, needs_manual_refund, canh_bao }.
- *   Đã huỷ từ trước: 200 { ok, mode:"cancel", already:true, display_id }.
+ *   Đã huỷ từ trước: 200 cùng các trường tiền, already:true; tính lại tiền và bù nhãn can_hoan_thu_cong nếu thiếu.
+ *   paid_amount = captured_amount - refunded_before (>= 0); needs_manual_refund theo captured_amount > 0 hoặc nhãn da_thanh_toan.
  *   LƯU Ý TIỀN: provider thanh toán là pp_system_default, refund chỉ GHI SỔ, không có tiền nào
  *   thật sự quay về khách. Vì vậy đơn đã thu tiền (paid_amount > 0 hoặc nhãn da_thanh_toan) được
  *   gắn metadata.thanh_toan_trang_thai = "can_hoan_thu_cong" và needs_manual_refund = true:
@@ -29,6 +30,20 @@ import { PAYMENT_FIELDS, claimActionLog, withOrderPaymentLock } from "../../../l
  */
 
 const sha256 = (s: string) => crypto.createHash("sha256").update(s).digest("hex");
+
+/** captured = tổng captures; refunded = tổng refunds đã ghi sổ; paid = captured - refunded (>= 0). */
+function tinhTien(order: any): { captured: number; refunded: number; paid: number } {
+  let captured = 0;
+  let refunded = 0;
+  const payments: any[] = (order?.payment_collections ?? []).flatMap((pc: any) => pc.payments ?? []).filter(Boolean);
+  for (const p of payments) {
+    if (p.canceled_at) continue;
+    const caps = (p.captures ?? []).reduce((s: number, c: any) => s + (Number(c?.amount) || 0), 0);
+    captured += caps > 0 ? caps : p.captured_at ? Number(p.amount) || 0 : 0;
+    refunded += (p.refunds ?? []).reduce((s: number, r: any) => s + (Number(r?.amount) || 0), 0);
+  }
+  return { captured, refunded, paid: Math.max(0, captured - refunded) };
+}
 
 type Out = { status: number; body: Record<string, unknown> };
 
@@ -109,6 +124,19 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     return { status, body: { error, code } };
   };
 
+  /** Gắn can_hoan_thu_cong (merge metadata đọc trong khoá). Trả thông báo lỗi nếu ghi hỏng. */
+  const ghiNhan = async (id: string, md: Record<string, unknown>): Promise<string | null> => {
+    try {
+      const orderModule: any = req.scope.resolve(Modules.ORDER);
+      await orderModule.updateOrders([{ id, metadata: { ...md, thanh_toan_trang_thai: "can_hoan_thu_cong" } }]);
+      return null;
+    } catch (e: any) {
+      const m = `Không ghi được nhãn can_hoan_thu_cong: ${e?.message ?? e}`;
+      logger.error(`[refund-order] ${m}`);
+      return m;
+    }
+  };
+
   const job = async (): Promise<Out> => {
     const { data: orders } = await query.graph({
       entity: "order",
@@ -116,6 +144,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         "id", "display_id", "status", "metadata",
         "fulfillments.id", "fulfillments.canceled_at",
         ...PAYMENT_FIELDS,
+        "payment_collections.payments.refunds.amount",
       ],
       filters: { id: orderId },
     });
@@ -124,7 +153,23 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       return { status: 404, body: { error: `Không tìm thấy đơn hàng ${orderId}`, code: "order_not_found" } };
     }
     if (order.status === "canceled") {
-      return { status: 200, body: { ok: true, mode: "cancel", already: true, display_id: order.display_id } };
+      // Đã huỷ từ trước (admin huỷ, hoặc lần trước chết giữa chừng): tính lại tiền và bù nhãn nếu thiếu.
+      const money = tinhTien(order);
+      const md0 = (order.metadata ?? {}) as Record<string, unknown>;
+      const canTay = money.captured > 0 || md0.thanh_toan_trang_thai === "da_thanh_toan";
+      const canhBao0: string[] = [];
+      if (canTay && md0.thanh_toan_trang_thai !== "can_hoan_thu_cong") {
+        const loi = await ghiNhan(orderId, md0);
+        if (loi) canhBao0.push(loi);
+      }
+      return {
+        status: 200,
+        body: {
+          ok: true, mode: "cancel", already: true, display_id: order.display_id,
+          paid_amount: money.paid, captured_amount: money.captured, refunded_before: money.refunded,
+          needs_manual_refund: canTay, canh_bao: canhBao0,
+        },
+      };
     }
     if (order.status === "completed") {
       return {
@@ -154,14 +199,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       return { status: 500, body: { error: "Không khởi tạo được phiên huỷ đơn", code: "internal_error" } };
     }
 
-    // Tổng đã capture TRƯỚC khi huỷ (captures.amount; payment captured_at mà thiếu captures thì tính amount).
-    const payments: any[] = (order.payment_collections ?? []).flatMap((pc: any) => pc.payments ?? []).filter(Boolean);
-    let paidAmount = 0;
-    for (const p of payments) {
-      if (p.canceled_at) continue;
-      const caps = (p.captures ?? []).reduce((s: number, c: any) => s + (Number(c?.amount) || 0), 0);
-      paidAmount += caps > 0 ? caps : p.captured_at ? Number(p.amount) || 0 : 0;
-    }
+    // Tiền tính TRƯỚC khi huỷ (workflow huỷ có thể tự ghi sổ refund).
+    const money = tinhTien(order);
 
     try {
       await cancelOrderWorkflow(req.scope).run({ input: { order_id: orderId } });
@@ -172,24 +211,17 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     }
 
     const md = (order.metadata ?? {}) as Record<string, unknown>;
-    const needsManualRefund = paidAmount > 0 || md.thanh_toan_trang_thai === "da_thanh_toan";
+    const needsManualRefund = money.captured > 0 || md.thanh_toan_trang_thai === "da_thanh_toan";
     const canhBao: string[] = [];
     if (needsManualRefund) {
-      try {
-        const orderModule: any = req.scope.resolve(Modules.ORDER);
-        await orderModule.updateOrders([
-          { id: orderId, metadata: { ...md, thanh_toan_trang_thai: "can_hoan_thu_cong" } },
-        ]);
-      } catch (e: any) {
-        canhBao.push(`Đã huỷ đơn nhưng không ghi được nhãn can_hoan_thu_cong: ${e?.message ?? e}`);
-        logger.error(`[refund-order] ${canhBao[0]}`);
-      }
+      const loi = await ghiNhan(orderId, md);
+      if (loi) canhBao.push(loi);
     }
 
     await pg
       .raw("UPDATE ai_action_log SET trang_thai = ?, ket_qua = ?, xong_luc = now() WHERE idempotency_key = ?", [
         "XONG",
-        JSON.stringify({ order_id: orderId, paid_amount: paidAmount, needs_manual_refund: needsManualRefund }),
+        JSON.stringify({ order_id: orderId, paid_amount: money.paid, needs_manual_refund: needsManualRefund }),
         key,
       ])
       .catch(() => undefined);
@@ -199,7 +231,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       doi_tuong_id: orderId,
       hanh_dong: "huy_don",
       truoc: { status: order.status, thanh_toan_trang_thai: md.thanh_toan_trang_thai ?? null },
-      sau: { status: "canceled", paid_amount: paidAmount, needs_manual_refund: needsManualRefund },
+      sau: { status: "canceled", paid_amount: money.paid, needs_manual_refund: needsManualRefund },
       ghi_chu: b.reason ?? null,
     });
 
@@ -210,7 +242,9 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         mode: "cancel",
         already: false,
         display_id: order.display_id,
-        paid_amount: paidAmount,
+        paid_amount: money.paid,
+        captured_amount: money.captured,
+        refunded_before: money.refunded,
         needs_manual_refund: needsManualRefund,
         canh_bao: canhBao,
       },

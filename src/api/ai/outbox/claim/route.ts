@@ -10,7 +10,7 @@ import { OUTBOX_MAX_ATTEMPTS } from "../../../../lib/outbox";
  *
  * Giành nguyên tử (FOR UPDATE SKIP LOCKED): dòng CHO, hoặc DANG_GUI đã treo quá 10 phút
  * (khi giành lại thì so_lan_thu + 1), chuyển sang DANG_GUI. Chỉ lấy dòng tạo trong 2 ngày
- * gần đây và so_lan_thu < 5; dòng DANG_GUI treo đã đủ 5 lần được chuyển LOI.
+ * gần đây và so_lan_thu < 5; dòng DANG_GUI treo đã đủ 5 lần hoặc cũ hơn 2 ngày được chuyển LOI (chỉ trong các `types` được xin).
  * Dòng CHO cũ hơn 2 ngày được để nguyên (không bị gửi, không bị sửa).
  * `claimed_at` = xu_ly_luc dạng text của Postgres, ĐỦ micro-giây (qua JS Date sẽ mất độ chính
  * xác nên không dùng Date): gửi nguyên chuỗi này lại cho POST /ai/outbox/:id/ack.
@@ -43,16 +43,19 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const logger = req.scope.resolve(ContainerRegistrationKeys.LOGGER);
   const pg = req.scope.resolve("__pg_connection__") as any;
   try {
-    // Dòng DANG_GUI treo mà đã đủ số lần thử thì dừng hẳn (tránh tin độc lặp mãi).
+    // Dòng DANG_GUI treo mà đã đủ số lần thử, hoặc treo quá 2 ngày (không còn nằm trong cửa sổ claim),
+    // thì dừng hẳn (tránh tin độc lặp mãi). Chỉ động tới các loại chatbot đang xin.
+    const loaiSql = `AND loai IN (${types.map(() => "?").join(", ")})`;
     await pg.raw(
       `UPDATE ai_outbox
        SET trang_thai = 'LOI', xu_ly_luc = now(),
            du_lieu = CASE WHEN jsonb_typeof(du_lieu) = 'object'
                           THEN jsonb_set(du_lieu, '{_loi}', to_jsonb('claim_timeout'::text)) ELSE du_lieu END
-       WHERE trang_thai = 'DANG_GUI' AND xu_ly_luc < now() - interval '10 minutes' AND so_lan_thu >= ?`,
-      [OUTBOX_MAX_ATTEMPTS]
+       WHERE trang_thai = 'DANG_GUI' AND xu_ly_luc < now() - interval '10 minutes'
+         AND (so_lan_thu >= ? OR tao_luc <= now() - interval '2 days')
+         ${loaiSql}`,
+      [OUTBOX_MAX_ATTEMPTS, ...types]
     );
-    const loaiSql = `AND loai IN (${types.map(() => "?").join(", ")})`;
     const r = await pg.raw(
       `UPDATE ai_outbox
        SET so_lan_thu = so_lan_thu + (CASE WHEN trang_thai = 'DANG_GUI' THEN 1 ELSE 0 END),
