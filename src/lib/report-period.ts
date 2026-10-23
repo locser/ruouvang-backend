@@ -26,3 +26,8 @@ export function periodRange(period: ReportPeriod, now: Date = new Date()): { fro
   const fromMs = Date.UTC(y, m, d) - VN_OFFSET_MS;
   return { from: new Date(fromMs).toISOString(), to: now.toISOString() };
 }
+
+/** Ngày YYYY-MM-DD theo giờ Việt Nam. */
+export function vnDateString(now: Date = new Date()): string {
+  return new Date(now.getTime() + VN_OFFSET_MS).toISOString().slice(0, 10);
+}

@@ -1,62 +1,41 @@
 import { MedusaContainer } from "@medusajs/framework";
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
+import { periodRange, vnDateString } from "../lib/report-period";
+import { summarizeRevenue } from "../lib/revenue-summary";
 
 /**
- * Báo cáo doanh thu 7 ngày, chạy 18:00 (giờ VN) hằng ngày -> đẩy vào ai_outbox,
- * Daemon định dạng Markdown và gửi Telegram cho Admin.
+ * Báo cáo doanh thu trong ngày (từ 0h giờ VN tới lúc chạy), 18:00 giờ VN hằng ngày
+ * -> đẩy vào ai_outbox (loai "bao_cao_doanh_thu", tham_chieu "revenue-<ngày VN>"),
+ * chatbot kéo về qua /ai/outbox/claim và gửi Telegram cho Admin.
+ * Logic tổng hợp dùng chung với GET /ai/report/revenue (src/lib/revenue-summary.ts).
  */
 export default async function revenueReportJob(container: MedusaContainer) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
-  const pg = container.resolve("__pg_connection__");
+  const pg = container.resolve("__pg_connection__") as any;
   const query = container.resolve(ContainerRegistrationKeys.QUERY);
 
-  const days = 7;
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
-
   try {
-    const { data: orders } = await query.graph({
-      entity: "order",
-      fields: ["id", "total", "currency_code", "created_at", "payment_status", "items.title", "items.quantity"],
-      filters: { created_at: { $gte: since } } as any,
-    });
-    const list: any[] = orders || [];
-    const paid = list.filter((o) =>
-      ["captured", "partially_captured", "partially_refunded", "refunded"].includes(o.payment_status)
+    const now = new Date();
+    const { from, to } = periodRange("today", now);
+    const summary = await summarizeRevenue(query as any, { from, to });
+    const thamChieu = `revenue-${vnDateString(now)}`;
+
+    const trung = await pg.raw(
+      "SELECT id FROM ai_outbox WHERE loai = 'bao_cao_doanh_thu' AND tham_chieu = ?",
+      [thamChieu]
     );
-    const revenueAll = list.reduce((s, o) => s + Number(o.total || 0), 0);
-    const revenuePaid = paid.reduce((s, o) => s + Number(o.total || 0), 0);
+    if ((trung?.rows?.length ?? 0) > 0) return;
 
-    const productQty: Record<string, number> = {};
-    for (const o of list) {
-      for (const it of o.items || []) {
-        const name = it.title || "(không tên)";
-        productQty[name] = (productQty[name] || 0) + Number(it.quantity || 0);
-      }
-    }
-    const topProducts = Object.entries(productQty)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([name, qty]) => ({ name, qty }));
-
-    const currency = list[0]?.currency_code?.toUpperCase() || "VND";
     await pg.raw(
       "INSERT INTO ai_outbox (loai, tham_chieu, du_lieu, trang_thai) VALUES (?, ?, ?, ?)",
       [
         "bao_cao_doanh_thu",
-        `revenue-${new Date().toISOString().slice(0, 10)}`,
-        JSON.stringify({
-          period_days: days,
-          order_count: list.length,
-          paid_order_count: paid.length,
-          revenue_all: revenueAll,
-          revenue_paid: revenuePaid,
-          currency,
-          top_products: topProducts,
-        }),
+        thamChieu,
+        JSON.stringify({ period: "today", period_days: null, from, to, since: from, ...summary }),
         "CHO",
       ]
     );
-    logger.info(`[revenue-report] Đã đẩy báo cáo ${days} ngày (${list.length} đơn).`);
+    logger.info(`[revenue-report] Đã đẩy báo cáo hôm nay (${summary.order_count} đơn, ${summary.canceled_count} huỷ).`);
   } catch (e: any) {
     logger.warn(`[revenue-report] Lỗi tổng hợp doanh thu: ${e.message}`);
   }
